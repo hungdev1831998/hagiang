@@ -126,7 +126,7 @@ export function Sheet({ open, onClose, title, children, footer }) {
   )
 }
 
-const inputCls = 'w-full rounded-2xl border border-line bg-card px-4 py-3 text-[15px] text-ink placeholder:text-muted/60 outline-none transition focus:border-brand'
+const inputCls = 'w-full rounded-2xl border border-line bg-card px-4 py-3 text-base text-ink placeholder:text-muted/60 sm:text-[15px] outline-none transition focus:border-brand'
 
 function Field({ f, value, set }) {
   const label = <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted">{f.label}</span>

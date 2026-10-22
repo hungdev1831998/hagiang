@@ -34,3 +34,4 @@ body { background: var(--color-bg); color: var(--color-ink); font-family: var(--
 button:not(:disabled), [role="button"], a[href], select, summary, label:has(input[type="checkbox"]),
 input[type="checkbox"], input[type="date"], input[type="time"], input[type="range"] { cursor: pointer; }
 button:disabled { cursor: not-allowed; }
+

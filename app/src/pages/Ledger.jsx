@@ -20,7 +20,7 @@ const editFields = (members) => [
   { key: 'payer', label: 'Ai trả', type: 'select', options: [{ value: '', label: 'Quỹ chung' }, ...members.map((m) => ({ value: m.name, label: m.name }))] },
 ]
 
-const selectCls = 'w-full appearance-none rounded-2xl border border-line bg-card px-4 py-3 text-sm text-ink outline-none focus:border-brand'
+const selectCls = 'w-full appearance-none rounded-2xl border border-line bg-card px-4 py-3 text-base text-ink outline-none focus:border-brand sm:text-sm'
 
 export default function Ledger() {
   const sum = useFundSummary()
@@ -117,7 +117,7 @@ export default function Ledger() {
           })}
         </div>
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={`Ghi chú (vd: ${cat === 'cafe' ? 'Cafe A Páo' : 'Lẩu gà đen phố cổ'})`}
-          className="mt-3 w-full rounded-2xl border border-line bg-card px-4 py-3 text-[15px] outline-none focus:border-brand" />
+          className="mt-3 w-full rounded-2xl border border-line bg-card px-4 py-3 text-base outline-none focus:border-brand sm:text-[15px]" />
         <div className="mt-3 grid grid-cols-2 gap-2">
           <select value={day} onChange={(e) => setDate(e.target.value)} className={selectCls}>
             {dateOptions.map((d) => <option key={d} value={d}>{d === today ? 'Hôm nay' : dayName(d)}</option>)}
