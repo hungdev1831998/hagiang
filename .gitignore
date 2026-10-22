@@ -1,0 +1,9 @@
+node_modules
+dist
+.firebase
+.DS_Store
+*.log
+*.local
+
+# Chứa hash mật khẩu nhóm: ai có hash là đọc/ghi được Firestore, không đưa lên repo public
+firestore.rules

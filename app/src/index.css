@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #121212;
+  --color-panel: #1b1b1b;
+  --color-card: #242424;
+  --color-card-2: #2c2c2c;
+  --color-line: #343434;
+  --color-ink: #f4f3ef;
+  --color-muted: #9d9c97;
+  --color-brand: #f26b1d;
+  --color-brand-2: #c45f22;
+  --color-ok: #4ade80;
+  --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
+  --font-hand: "Patrick Hand", cursive;
+}
+
+html { background: var(--color-bg); color-scheme: dark; -webkit-tap-highlight-color: transparent; }
+body { background: var(--color-bg); color: var(--color-ink); font-family: var(--font-sans); overflow-x: hidden; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+.dash-v { background-image: repeating-linear-gradient(to bottom, #6b6b68 0 4px, transparent 4px 9px); }
+.striped { background-image: repeating-linear-gradient(45deg, rgba(242,107,29,.55) 0 6px, rgba(242,107,29,.25) 6px 12px); }
+.safe-b { padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem); }
+@keyframes rise { from { opacity: 0; transform: translateY(10px) } }
+.rise { animation: rise .35s ease both; }
+@keyframes sheet { from { transform: translateY(24px); opacity: 0 } }
+.sheet-in { animation: sheet .25s ease both; }
