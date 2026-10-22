@@ -1,10 +1,11 @@
 import { useState } from 'react'
+import { to } from '../router'
 import { CheckCircle2, Plus } from 'lucide-react'
 import { remove, save, swapOrder, useCollection } from '../store'
 import { CATS } from '../seed'
 import { AddButton, Btn, EditTools, FormSheet, Loading, SectionTitle, Segmented, confirmDelete, money, shortMoney, useForm } from '../components/ui'
 
-const catOf = (k) => CATS.find((c) => c.key === k) || CATS.at(-1)
+export const catOf = (k) => CATS.find((c) => c.key === k) || CATS.at(-1)
 const MEMBER_FIELDS = [
   { key: 'name', label: 'Tên' },
   { key: 'contributed', label: 'Đã góp quỹ', type: 'money' },
@@ -24,8 +25,14 @@ export function useFundSummary() {
   const expenses = useCollection('expenses')
   if (!members || !expenses) return null
   const fund = members.reduce((a, m) => a + (Number(m.contributed) || 0), 0)
-  const paid = expenses.filter((e) => e.status === 'paid').reduce((a, e) => a + (Number(e.amount) || 0), 0)
-  const planned = expenses.filter((e) => e.status !== 'paid').reduce((a, e) => a + (Number(e.amount) || 0), 0)
+  const amt = (e) => Number(e.amount) || 0
+  const paid = expenses.filter((e) => e.status === 'paid').reduce((a, e) => a + amt(e), 0)
+  // Khoản ghi trong Sổ chi trừ dần vào khoản dự kiến cùng loại (cafe tính vào ăn uống), để không tính trùng
+  const logged = {}
+  expenses.filter((e) => e.kind === 'log').forEach((e) => { const k = catOf(e.cat).budget || e.cat; logged[k] = (logged[k] || 0) + amt(e) })
+  const plannedByCat = {}
+  expenses.filter((e) => e.status !== 'paid').forEach((e) => { plannedByCat[e.cat] = (plannedByCat[e.cat] || 0) + amt(e) })
+  const planned = Object.entries(plannedByCat).reduce((a, [k, v]) => a + Math.max(0, v - (logged[k] || 0)), 0)
   return { members, expenses, fund, paid, planned, left: fund - paid - planned, cash: fund - paid }
 }
 
@@ -36,7 +43,8 @@ export default function Fund() {
   const expForm = useForm()
   if (!sum) return <Loading />
   const { members, expenses, fund, paid, planned, left, cash } = sum
-  const shown = expenses.filter((e) => filter === 'all' || (filter === 'paid' ? e.status === 'paid' : e.status !== 'paid'))
+  const logs = expenses.filter((e) => e.kind === 'log')
+  const shown = expenses.filter((e) => e.kind !== 'log' && (filter === 'all' || (filter === 'paid' ? e.status === 'paid' : e.status !== 'paid')))
   const pct = (x) => `${fund ? Math.min(100, (x / fund) * 100) : 0}%`
 
   return (
@@ -50,7 +58,7 @@ export default function Fund() {
           <div className="bg-white/45" style={{ width: pct(planned) }} />
         </div>
         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-white/85">
-          <span>⬤ Đã chi {shortMoney(paid)}</span><span className="opacity-80">⬤ Dự kiến {shortMoney(planned)}</span>
+          <span>⬤ Đã chi {shortMoney(paid)}</span><span className="opacity-80">⬤ Dự kiến còn lại {shortMoney(planned)}</span>
         </div>
         <div className="mt-6 grid grid-cols-2 gap-3">
           <div className="rounded-2xl bg-black/20 p-4">
@@ -73,20 +81,30 @@ export default function Fund() {
           <Segmented value={filter} onChange={setFilter} options={[{ value: 'all', label: 'Tất cả' }, { value: 'paid', label: 'Đã chi' }, { value: 'planned', label: 'Dự kiến' }]} />
         </div>
         <div className="space-y-2">
+          {filter !== 'planned' && (
+            <a href={to('so-chi')} className="flex items-center gap-3 rounded-3xl border border-brand/40 bg-brand/10 p-3.5 pr-4 transition hover:bg-brand/15">
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-brand/20 text-2xl">📒</div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[15px] font-semibold">Sổ chi hằng ngày</div>
+                <div className="text-xs text-muted">{logs.length} khoản cafe, ăn uống… thủ quỹ ghi</div>
+              </div>
+              <div className="shrink-0 font-bold">{shortMoney(logs.reduce((a, e) => a + (Number(e.amount) || 0), 0))}</div>
+            </a>
+          )}
           {shown.map((e) => {
             const c = catOf(e.cat), done = e.status === 'paid'
             return (
               <div key={e.id} onClick={() => expForm.open(e)} className="flex cursor-pointer items-center gap-3 rounded-3xl bg-card p-3.5 pr-4 transition hover:bg-card-2">
                 <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-card-2 text-2xl">{c.icon}</div>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-[15px] font-semibold">{e.title}</div>
+                  <div className="line-clamp-2 text-[15px] leading-snug font-semibold">{e.title}</div>
                   <div className="truncate text-xs text-muted">{[e.payer || 'Quỹ chung', e.note].filter(Boolean).join(' · ')}</div>
                 </div>
-                <div className="text-right">
-                  <div className="font-bold">{money(e.amount)}</div>
+                <div className="shrink-0 text-right">
+                  <div className="font-bold">{shortMoney(e.amount)}</div>
                   {done
                     ? <div className="text-[11px] font-semibold text-ok">Đã chi</div>
-                    : <button onClick={(ev) => { ev.stopPropagation(); save('expenses', e.id, { status: 'paid' }) }} className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand"><CheckCircle2 size={12} /> Đánh dấu đã chi</button>}
+                    : <button onClick={(ev) => { ev.stopPropagation(); save('expenses', e.id, { status: 'paid' }) }} className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand"><CheckCircle2 size={12} /> Đã chi?</button>}
                 </div>
               </div>
             )
@@ -107,7 +125,7 @@ export default function Fund() {
                 <div className="text-xs text-muted">{m.note}</div>
               </div>
               <div className="text-right font-bold">{shortMoney(m.contributed)}</div>
-              <EditTools onEdit={() => memberForm.open(m)} onDelete={() => confirmDelete(m.name) && remove('members', m.id)}
+              <EditTools onEdit={() => memberForm.open(m)} onDelete={() => confirmDelete(`thành viên ${m.name}`, () => remove('members', m.id))}
                 onUp={i > 0 ? () => swapOrder('members', members, i, i - 1) : null} />
             </div>
           ))}
@@ -117,7 +135,7 @@ export default function Fund() {
 
       <FormSheet {...expForm.props} title={expForm.props.initial?.id ? 'Sửa khoản chi' : 'Thêm khoản chi'} fields={expenseFields(members)}
         onSubmit={({ id, ...v }) => save('expenses', id, v)}
-        onDelete={expForm.props.initial?.id ? () => confirmDelete('khoản chi này') && remove('expenses', expForm.props.initial.id) : null} />
+        onDelete={expForm.props.initial?.id ? () => confirmDelete('khoản chi này', () => remove('expenses', expForm.props.initial.id)) : null} />
       <FormSheet {...memberForm.props} title={memberForm.props.initial?.id ? 'Sửa thành viên' : 'Thêm thành viên'} fields={MEMBER_FIELDS}
         onSubmit={({ id, ...v }) => save('members', id, v)} />
     </div>

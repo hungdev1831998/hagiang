@@ -1,8 +1,22 @@
 import { createContext, useContext, useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { ChevronDown, ChevronUp, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { IMAGE_LIBRARY } from '../seed'
 
 export const EditContext = createContext({ edit: false })
+
+// Đường dẫn ảnh lưu dạng "/img/..."; thêm base để chạy được cả Firebase lẫn GitHub Pages (/<repo>/)
+export const asset = (p) => (p && p.startsWith('/') ? encodeURI(import.meta.env.BASE_URL + p.slice(1)) : p)
+
+// Cụm ảnh cắt từ Figma xếp chồng, dùng cho trang chủ và màn đăng nhập
+export function FigmaCollage({ className = '' }) {
+  const pics = [['lung-cu', '-rotate-6 left-0 top-6'], ['nho-que', 'rotate-3 left-[30%] top-0 z-10'], ['ma-pi-leng', 'rotate-6 right-0 top-10']]
+  return (
+    <div className={`pointer-events-none relative h-40 w-72 ${className}`}>
+      {pics.map(([k, pos]) => <img key={k} src={asset(`/img/stops/${k}.png`)} alt="" className={`absolute h-32 w-32 object-contain drop-shadow-[0_12px_24px_rgba(0,0,0,.5)] ${pos}`} />)}
+    </div>
+  )
+}
 export const useEdit = () => useContext(EditContext).edit
 
 export const money = (n) => `${Math.round(Number(n) || 0).toLocaleString('vi-VN')}đ`
@@ -18,7 +32,10 @@ export const dayLabel = (iso) => {
   const d = new Date(`${iso}T00:00:00+07:00`)
   return `${WD[d.getDay()]} · ${d.getDate()}/${d.getMonth() + 1}`
 }
-export const confirmDelete = (what) => window.confirm(`Xoá ${what}?`)
+// Popup xác nhận dùng chung (thay window.confirm). ConfirmHost gắn 1 lần ở App.
+let showConfirm = null
+export const askConfirm = (opts) => (showConfirm ? showConfirm(opts) : window.confirm(opts.title) && opts.onYes())
+export const confirmDelete = (what, onYes) => askConfirm({ title: `Xoá ${what}?`, message: 'Cả nhóm sẽ không thấy mục này nữa. Không hoàn tác được.', confirmLabel: 'Xoá', danger: true, onYes })
 
 export function Btn({ variant = 'primary', className = '', ...p }) {
   const v = {
@@ -94,7 +111,7 @@ export function Sheet({ open, onClose, title, children, footer }) {
     return () => { removeEventListener('keydown', h); document.body.style.overflow = '' }
   }, [open, onClose])
   if (!open) return null
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm sm:items-center sm:p-6" onClick={onClose}>
       <div className="sheet-in flex max-h-[92vh] w-full max-w-lg flex-col rounded-t-[28px] border border-line bg-panel sm:rounded-[28px]" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 pt-5 pb-3">
@@ -104,7 +121,8 @@ export function Sheet({ open, onClose, title, children, footer }) {
         <div className="flex-1 overflow-y-auto px-5 pb-4">{children}</div>
         {footer && <div className="safe-b flex gap-2 border-t border-line px-5 pt-3">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
@@ -144,7 +162,7 @@ function Field({ f, value, set }) {
         <button type="button" onClick={() => set('')} className={`grid h-16 w-16 shrink-0 place-items-center rounded-2xl border text-xs ${!value ? 'border-brand text-ink' : 'border-line text-muted'}`}>Không</button>
         {IMAGE_LIBRARY.map((src) => (
           <button type="button" key={src} onClick={() => set(src)} className={`h-16 w-16 shrink-0 overflow-hidden rounded-2xl border-2 ${value === src ? 'border-brand' : 'border-transparent'}`}>
-            <img src={src} alt="" className="h-full w-full object-cover" />
+            <img src={asset(src)} alt="" className="h-full w-full object-contain" />
           </button>
         ))}
       </div>
@@ -211,12 +229,43 @@ export function useForm() {
   }
 }
 
+export function ConfirmHost() {
+  const [opts, setOpts] = useState(null)
+  useEffect(() => { showConfirm = setOpts; return () => { showConfirm = null } }, [])
+  useEffect(() => {
+    if (!opts) return
+    const h = (e) => { if (e.key === 'Escape') setOpts(null); if (e.key === 'Enter') { opts.onYes(); setOpts(null) } }
+    addEventListener('keydown', h)
+    return () => removeEventListener('keydown', h)
+  }, [opts])
+  if (!opts) return null
+  const close = () => setOpts(null)
+  return createPortal(
+    <div className="fixed inset-0 z-[60] grid place-items-center bg-black/70 p-6 backdrop-blur-sm" onClick={close}>
+      <div className="sheet-in w-full max-w-xs rounded-[28px] border border-line bg-panel p-6 text-center" onClick={(e) => e.stopPropagation()}>
+        <div className={`mx-auto grid h-14 w-14 place-items-center rounded-2xl ${opts.danger ? 'bg-red-500/15 text-red-300' : 'bg-brand/15 text-brand'}`}>
+          {opts.danger ? <Trash2 size={24} /> : opts.icon || <X size={24} />}
+        </div>
+        <h3 className="mt-4 text-lg font-bold">{opts.title}</h3>
+        {opts.message && <p className="mt-1.5 text-sm text-muted">{opts.message}</p>}
+        <div className="mt-6 grid grid-cols-2 gap-2">
+          <Btn variant="ghost" onClick={close}>Huỷ</Btn>
+          <Btn className={opts.danger ? '!bg-red-500 !shadow-none hover:!bg-red-600' : ''} onClick={() => { opts.onYes(); close() }}>{opts.confirmLabel || 'Đồng ý'}</Btn>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  )
+}
+
 export function Lightbox({ src, onClose }) {
   if (!src) return null
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/90 p-4" onClick={onClose}>
-      <img src={src} alt="" className="max-h-[92vh] max-w-full rounded-2xl object-contain" />
-      <button className="absolute top-4 right-4 grid h-10 w-10 place-items-center rounded-full bg-white/10 text-white" onClick={onClose}><X /></button>
-    </div>
+  return createPortal(
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/90 p-4" onClick={onClose}>
+      {/* ảnh cắt từ Figma nhỏ: hiện đúng kích thước gốc ×1.3 cho nét; ảnh khác thì vừa màn hình */}
+      <img src={asset(src)} alt="" className={`mx-auto my-auto rounded-2xl ${src.includes('/img/stops/') ? 'mt-[20vh] w-[min(90vw,380px)]' : 'max-w-full sm:max-w-lg'}`} />
+      <button className="fixed top-4 right-4 grid h-10 w-10 place-items-center rounded-full bg-white/15 text-white" onClick={onClose}><X /></button>
+    </div>,
+    document.body,
   )
 }

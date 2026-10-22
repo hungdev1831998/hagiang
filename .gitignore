@@ -7,3 +7,6 @@ dist
 
 # Chứa hash mật khẩu nhóm: ai có hash là đọc/ghi được Firestore, không đưa lên repo public
 firestore.rules
+
+# Bản sao lưu dữ liệu nhóm (tên, tiền góp, ghi chú): chỉ giữ trên máy
+backups/

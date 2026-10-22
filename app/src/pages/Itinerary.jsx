@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Camera, MapPinned, Plus, Pencil, Trash2 } from 'lucide-react'
 import { remove, save, useCollection } from '../store'
-import { AddButton, Btn, EditTools, FormSheet, Lightbox, Loading, Segmented, confirmDelete, dayLabel, useEdit, useForm } from '../components/ui'
+import { AddButton, Btn, EditTools, FormSheet, Lightbox, Loading, Segmented, asset, confirmDelete, dayLabel, useEdit, useForm } from '../components/ui'
 
 const STOP_FIELDS = [
   { key: 'title', label: 'Tên điểm dừng' },
@@ -12,6 +12,8 @@ const STOP_FIELDS = [
   { key: 'img', label: 'Ảnh', type: 'image' },
   { key: 'legKm', label: 'Quãng đường tới điểm tiếp theo', placeholder: '12km' },
   { key: 'legDur', label: 'Thời gian di chuyển', placeholder: '30p' },
+  { key: 'legFrom', label: 'Giờ rời điểm này', placeholder: '10:00' },
+  { key: 'legTo', label: 'Giờ tới điểm tiếp theo', placeholder: '10:30' },
 ]
 const DAY_FIELDS = [
   { key: 'title', label: 'Tên ngày', placeholder: 'Hà Giang → Đồng Văn' },
@@ -23,16 +25,19 @@ const DAY_FIELDS = [
 
 const todayIso = () => new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 10)
 
+// Đoạn đường nối 2 điểm: giờ rời điểm trước → km, thời gian → giờ tới điểm sau (như nét đứt trong Figma)
 function Leg({ leg }) {
   return (
-    <div className="relative flex h-20 items-center pl-[27px]">
+    <div className="relative h-28 pl-[27px]">
       <div className="dash-v absolute top-0 bottom-0 left-[27px] w-[2px]" />
-      {leg && (leg.km || leg.dur) && (
-        <div className="ml-6 flex items-center gap-2 text-xs">
-          {leg.km && <span className="font-semibold text-muted">{leg.km}</span>}
-          {leg.dur && <span className="rounded-lg bg-ink px-2.5 py-1 font-bold text-bg">{leg.dur}</span>}
+      {leg?.from && <span className="absolute top-2 right-6 text-xs font-semibold tabular-nums text-muted">rời {leg.from}</span>}
+      {(leg?.km || leg?.dur) && (
+        <div className="absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1 text-xs">
+          {leg.km && <span className="font-bold text-ink">{leg.km}</span>}
+          {leg.dur && <span className="-rotate-2 rounded-lg bg-ink px-3 py-1 font-bold text-bg shadow">{leg.dur}</span>}
         </div>
       )}
+      {leg?.to && <span className="absolute bottom-2 left-12 text-xs font-semibold tabular-nums text-muted">tới {leg.to}</span>}
     </div>
   )
 }
@@ -65,9 +70,14 @@ function StopCard({ s, onEdit, onDelete, onUp, onDown, onImg }) {
               </li>
             ))}
           </ul>
-          {s.img ? (
+          {s.img?.includes('/img/stops/') ? (
+            // ảnh cắt từ Figma đã có sẵn khung + viền trắng + drone
+            <button onClick={() => onImg(s.img)} className="h-28 w-28 shrink-0 sm:h-32 sm:w-32">
+              <img src={asset(s.img)} alt={s.title} loading="lazy" className="h-full w-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,.45)]" />
+            </button>
+          ) : s.img ? (
             <button onClick={() => onImg(s.img)} className="h-24 w-24 shrink-0 overflow-hidden rounded-full border-[3px] border-ink/90 shadow-xl sm:h-28 sm:w-28">
-              <img src={s.img} alt={s.title} loading="lazy" className="h-full w-full object-cover" />
+              <img src={asset(s.img)} alt={s.title} loading="lazy" className="h-full w-full object-cover" />
             </button>
           ) : (
             <div className="grid h-20 w-20 shrink-0 place-items-center rounded-full bg-gradient-to-br from-brand to-brand-2 text-4xl shadow-xl">{s.icon || '📍'}</div>
@@ -94,8 +104,8 @@ export default function Itinerary() {
 
   const setStops = (next) => save('days', day.id, { stops: next })
   const submitStop = (v) => {
-    const { legKm, legDur, ...rest } = v
-    const s = { icon: '📍', desc: '', img: '', items: [], ...rest, leg: legKm || legDur ? { km: legKm || '', dur: legDur || '' } : null }
+    const { legKm, legDur, legFrom, legTo, ...rest } = v
+    const s = { icon: '📍', desc: '', img: '', items: [], ...rest, leg: legKm || legDur || legFrom || legTo ? { km: legKm || '', dur: legDur || '', from: legFrom || '', to: legTo || '' } : null }
     const i = stopForm.meta?.index
     if (i == null) setStops([...stops, { ...s, id: `s${Date.now()}` }])
     else setStops(stops.map((x, j) => (j === i ? { ...x, ...s } : x)))
@@ -124,6 +134,7 @@ export default function Itinerary() {
         )}
       </div>
 
+      {!day && <p className="py-16 text-center text-muted">Chưa có ngày nào. Bấm <b>Sửa</b> rồi dấu <b>+</b> để thêm.</p>}
       {day && (
         <>
           {/* tiêu đề ngày kiểu Figma */}
@@ -145,22 +156,23 @@ export default function Itinerary() {
             <Segmented value={view} onChange={setView} options={[{ value: 'timeline', label: 'Timeline' }, { value: 'figma', label: 'Bản Figma' }]} />
             <div className="flex gap-2">
               {edit && <Btn variant="ghost" onClick={() => dayForm.open(day)}><Pencil size={15} /> Sửa ngày</Btn>}
-              {edit && <Btn variant="danger" onClick={() => confirmDelete(`Day ${idx + 1}`) && (remove('days', day.id), setActive(null))}><Trash2 size={15} /></Btn>}
+              {edit && <Btn variant="danger" onClick={() => confirmDelete(`Day ${idx + 1}`, () => { remove('days', day.id); setActive(null) })}><Trash2 size={15} /></Btn>}
               {!edit && stops.length > 1 && <a href={mapUrl} target="_blank" rel="noreferrer"><Btn variant="ghost"><MapPinned size={16} /> Chỉ đường</Btn></a>}
             </div>
           </div>
 
           {view === 'figma' ? (
             day.figmaImg
-              ? <img src={day.figmaImg} alt={`Day ${idx + 1}`} onClick={() => setImg(day.figmaImg)} className="mx-auto w-full max-w-sm cursor-zoom-in rounded-[28px]" />
+              ? <img src={asset(day.figmaImg)} alt={`Day ${idx + 1}`} onClick={() => setImg(day.figmaImg)} className="mx-auto w-full max-w-sm cursor-zoom-in rounded-[28px]" />
               : <p className="py-10 text-center text-muted">Ngày này chưa có ảnh Figma. Bật chế độ Sửa → Sửa ngày để thêm.</p>
           ) : (
-            <div className="mx-auto max-w-xl">
+            <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-10">
+            <div className="mx-auto w-full max-w-xl">
               {stops.map((s, i) => (
                 <div key={s.id}>
                   <StopCard s={s} onImg={setImg}
-                    onEdit={() => stopForm.open({ ...s, legKm: s.leg?.km, legDur: s.leg?.dur }, { index: i })}
-                    onDelete={() => confirmDelete(`"${s.title}"`) && setStops(stops.filter((_, j) => j !== i))}
+                    onEdit={() => stopForm.open({ ...s, legKm: s.leg?.km, legDur: s.leg?.dur, legFrom: s.leg?.from, legTo: s.leg?.to }, { index: i })}
+                    onDelete={() => confirmDelete(`"${s.title}"`, () => setStops(stops.filter((_, j) => j !== i)))}
                     onUp={i > 0 ? () => move(i, i - 1) : null}
                     onDown={i < stops.length - 1 ? () => move(i, i + 1) : null} />
                   {i < stops.length - 1 && <Leg leg={s.leg} />}
@@ -169,6 +181,14 @@ export default function Itinerary() {
               {stops.length === 0 && <p className="py-10 text-center text-muted">Chưa có điểm dừng nào.</p>}
               {edit && <div className="mt-6"><AddButton onClick={() => stopForm.open({ items: [], icon: '📍' })}>Thêm điểm dừng</AddButton></div>}
               {idx === days.length - 1 && <div className="mt-14 text-center font-hand text-5xl leading-tight text-muted/40">HAPPY<br />TRIP! :b</div>}
+            </div>
+            {day.figmaImg && (
+              <aside className="hidden lg:block">
+                <div className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto rounded-[28px]">
+                  <img src={asset(day.figmaImg)} alt="" onClick={() => setImg(day.figmaImg)} className="w-full cursor-zoom-in" />
+                </div>
+              </aside>
+            )}
             </div>
           )}
         </>

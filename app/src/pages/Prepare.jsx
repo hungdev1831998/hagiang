@@ -41,7 +41,7 @@ function Checklist() {
                       </span>
                       <span className={`text-[15px] ${it.done ? 'text-muted line-through' : ''}`}>{it.text}</span>
                     </button>
-                    <EditTools onEdit={() => form.open(it)} onDelete={() => confirmDelete(`"${it.text}"`) && remove('checklist', it.id)}
+                    <EditTools onEdit={() => form.open(it)} onDelete={() => confirmDelete(`"${it.text}"`, () => remove('checklist', it.id))}
                       onUp={i > 0 ? () => swapOrder('checklist', rows, i, i - 1) : null} />
                   </div>
                 ))}
@@ -78,7 +78,7 @@ function Contacts() {
                 <div className="font-bold">{c.name}</div>
                 <div className="text-sm text-muted">{c.role}</div>
               </div>
-              <EditTools onEdit={() => form.open(c)} onDelete={() => confirmDelete(c.name) && remove('contacts', c.id)}
+              <EditTools onEdit={() => form.open(c)} onDelete={() => confirmDelete(c.name, () => remove('contacts', c.id))}
                 onUp={i > 0 ? () => swapOrder('contacts', items, i, i - 1) : null} />
             </div>
             <div className="mt-4 flex gap-2">
@@ -110,7 +110,7 @@ function Notes() {
                 {n.title}
                 <ChevronDown size={18} className={`shrink-0 text-brand transition ${open === n.id ? 'rotate-180' : ''}`} />
               </button>
-              <EditTools onEdit={() => form.open(n)} onDelete={() => confirmDelete(`"${n.title}"`) && remove('notes', n.id)}
+              <EditTools onEdit={() => form.open(n)} onDelete={() => confirmDelete(`"${n.title}"`, () => remove('notes', n.id))}
                 onUp={i > 0 ? () => swapOrder('notes', items, i, i - 1) : null} />
             </div>
             {open === n.id && <p className="px-4 pb-4 text-sm leading-relaxed whitespace-pre-line text-muted">{n.body}</p>}

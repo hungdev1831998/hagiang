@@ -26,3 +26,11 @@ body { background: var(--color-bg); color: var(--color-ink); font-family: var(--
 .rise { animation: rise .35s ease both; }
 @keyframes sheet { from { transform: translateY(24px); opacity: 0 } }
 .sheet-in { animation: sheet .25s ease both; }
+@keyframes float { 50% { translate: 0 -8px } }
+.float { animation: float 6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .float, .rise, .sheet-in { animation: none } }
+
+/* Tailwind v4 bỏ cursor:pointer mặc định của nút, thêm lại cho mọi thứ bấm được */
+button:not(:disabled), [role="button"], a[href], select, summary, label:has(input[type="checkbox"]),
+input[type="checkbox"], input[type="date"], input[type="time"], input[type="range"] { cursor: pointer; }
+button:disabled { cursor: not-allowed; }
