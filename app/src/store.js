@@ -90,13 +90,17 @@ function record(entry) {
 }
 
 // Ghi không cần chờ server (offline vẫn ghi, có mạng tự đồng bộ)
+// Thêm mục mới, trả id ngay (không chờ đọc server) để hoàn tác được tức thì, kể cả lúc mất sóng
+export function create(name, data, { log = true } = {}) {
+  const r = doc(colRef(name))
+  const full = { order: Date.now(), ...data }
+  if (log) record({ col: name, docId: r.id, action: 'create', before: null, after: full })
+  setDoc(r, full).catch(() => {})
+  return r.id
+}
+
 export async function save(name, id, data, { log = true } = {}) {
-  if (!id) {
-    const r = doc(colRef(name))
-    const full = { order: Date.now(), ...data }
-    if (log) record({ col: name, docId: r.id, action: 'create', before: null, after: full })
-    return setDoc(r, full)
-  }
+  if (!id) return create(name, data, { log })
   const before = log ? await readDoc(name, id) : null
   if (log) record({ col: name, docId: id, action: before ? 'update' : 'create', before, after: { ...(before || {}), ...strip(data) } })
   return setDoc(docRef(name, id), strip(data), { merge: true })
@@ -149,6 +153,21 @@ export async function getPhotoFile(id) {
 }
 
 export const removePhotoFile = (id) => deleteDoc(docRef('photoFiles', id)).catch(() => {})
+
+// Ảnh hoá đơn của khoản chi: field receipt = { thumb, file }, ảnh lớn cũng nằm ở photoFiles.
+// Form trả về receipt = { thumb, full } khi vừa chụp: ghi ảnh lớn ra photoFiles, ảnh cũ bị thay/bỏ thì xoá.
+export function withReceipt(v, prev) {
+  const { receipt: r, ...rest } = v
+  if (!r && !prev?.receipt) return rest
+  let receipt = r ? { thumb: r.thumb, file: r.file } : null
+  if (r?.full) {
+    const id = newId('photoFiles')
+    setDoc(docRef('photoFiles', id), { data: r.full }).catch(() => {})
+    receipt = { thumb: r.thumb, file: id }
+  }
+  if (prev?.receipt?.file && prev.receipt.file !== receipt?.file) removePhotoFile(prev.receipt.file)
+  return { ...rest, receipt }
+}
 
 // ---- Backup ra file / nạp lại ----
 export const BACKUP_COLS = ['meta', 'days', 'members', 'expenses', 'checklist', 'contacts', 'notes', 'photos', 'suggestions']

@@ -20,10 +20,11 @@ const FIELD_LABEL = {
   desc: 'mô tả', items: 'hoạt động', leg: 'đường đi', icon: 'icon', weather: 'thời tiết', caption: 'chú thích', credit: 'nguồn',
   kind: 'loại', area: 'khu vực', link: 'link', chosen: 'chốt', by: 'người đề xuất', flights: 'chuyến bay',
   km: 'quãng đường', dur: 'thời gian', from: 'giờ đi', to: 'giờ tới', label: 'tên', code: 'mã',
+  split: 'chia cho', contribs: 'các lần góp', receipt: 'hoá đơn',
 }
 // Trường kỹ thuật không hiện; trường ảnh chỉ báo "đổi ảnh" (có thể là dataURL rất dài)
 const HIDDEN = new Set(['id', 'order', 'votes', 'thumb', 'file'])
-const IMAGE_KEYS = new Set(['img', 'src', 'figmaImg'])
+const IMAGE_KEYS = new Set(['img', 'src', 'figmaImg', 'receipt'])
 
 // So sánh không phụ thuộc thứ tự trường: Firestore trả map với thứ tự key không cố định
 const stable = (v) => JSON.stringify(v, (_, x) => (x && typeof x === 'object' && !Array.isArray(x) ? Object.fromEntries(Object.keys(x).sort().map((k) => [k, x[k]])) : x))
@@ -52,7 +53,8 @@ function describe(e) {
 // { label, from, to } giá trị đơn · { label, minus, plus } danh sách (hoạt động…) · { label, text } còn lại
 const shown = (k, v) => (v == null || v === '' ? '–' : fmtVal(k, v))
 const itemText = (it) => (it && typeof it === 'object'
-  ? [it.label || it.name || it.title || it.code, it.time].filter(Boolean).join(' · ') || stable(it)
+  ? it.amount != null ? [money(it.amount), it.date && it.date.split('-').reverse().join('/'), it.note].filter(Boolean).join(' · ') // lần góp quỹ
+  : [it.label || it.name || it.title || it.code, it.time].filter(Boolean).join(' · ') || stable(it)
   : String(it))
 const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v)
 function changes(a, b) {

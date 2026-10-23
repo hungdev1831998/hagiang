@@ -1,7 +1,9 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronDown, ChevronUp, Pencil, Plus, Trash2, X } from 'lucide-react'
+import { Camera, ChevronDown, ChevronUp, Loader2, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { IMAGE_LIBRARY } from '../seed'
+import { getPhotoFile } from '../store'
+import { compressPhoto } from '../photo'
 
 export const EditContext = createContext({ edit: false })
 
@@ -21,10 +23,11 @@ export function FigmaCollage({ className = '' }) {
 export const useEdit = () => useContext(EditContext).edit
 
 export const money = (n) => `${Math.round(Number(n) || 0).toLocaleString('vi-VN')}đ`
+// Dạng rút gọn chỉ dùng cho chỗ nhìn nhanh (tổng quan, thanh tiến độ); từng khoản / quyết toán dùng money() đủ số
 export const shortMoney = (n) => {
   const v = Number(n) || 0
-  if (Math.abs(v) >= 1e6) return `${(v / 1e6).toLocaleString('vi-VN', { maximumFractionDigits: 1 })}tr`
-  if (Math.abs(v) >= 1e3) return `${Math.round(v / 1e3)}k`
+  if (Math.abs(v) >= 1e6) return `${(v / 1e6).toLocaleString('vi-VN', { maximumFractionDigits: 2 })}tr`
+  if (Math.abs(v) >= 1e3) return `${(v / 1e3).toLocaleString('vi-VN', { maximumFractionDigits: 1 })}k`
   return `${v}`
 }
 const WD = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7']
@@ -151,6 +154,29 @@ function Field({ f, value, set }) {
       </div>
     </label>
   )
+  // Chọn nhiều người; [] = cả nhóm (Firestore không nhận undefined)
+  if (f.type === 'people') {
+    const all = f.options, sel = value?.length ? value.filter((n) => all.includes(n)) : all
+    const toggle = (n) => {
+      // đang "Cả nhóm" thì bấm 1 tên = chỉ chọn người đó
+      const next = sel.length === all.length ? [n] : sel.includes(n) ? sel.filter((x) => x !== n) : [...sel, n]
+      set(next.length === 0 || next.length === all.length ? [] : all.filter((x) => next.includes(x)))
+    }
+    return (
+      <div>{label}
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={() => set([])}
+            className={`rounded-xl border px-3 py-2 text-sm transition ${sel.length === all.length ? 'border-brand bg-brand/15 text-ink' : 'border-line bg-card text-muted'}`}>Cả nhóm</button>
+          {all.map((n) => (
+            <button type="button" key={n} onClick={() => toggle(n)}
+              className={`rounded-xl border px-3 py-2 text-sm transition ${sel.length < all.length && sel.includes(n) ? 'border-brand bg-brand/15 text-ink' : 'border-line bg-card text-muted'}`}>{n}</button>
+          ))}
+        </div>
+        {sel.length < all.length && <p className="mt-1.5 text-xs text-muted">Chia đều cho {sel.length} người, mỗi người chịu một phần.</p>}
+      </div>
+    )
+  }
+  if (f.type === 'receipt') return <div>{label}<ReceiptInput value={value} set={set} /></div>
   if (f.type === 'toggle') return (
     <label className="flex items-center justify-between rounded-2xl bg-card px-4 py-3">
       <span className="text-sm">{f.label}</span>
@@ -192,6 +218,40 @@ function Field({ f, value, set }) {
 }
 
 // Form chung cho mọi loại dữ liệu: truyền danh sách field, nhận object khi lưu
+// Ảnh hoá đơn: value = { thumb, file } (đã lưu) hoặc { thumb, full } (vừa chụp, lưu khi bấm Lưu)
+export function ReceiptInput({ value, set, compact = false }) {
+  const input = useRef(null)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const [big, setBig] = useState(null)
+  const pick = async (e) => {
+    const file = e.target.files[0]
+    e.target.value = ''
+    if (!file) return
+    setBusy(true); setErr('')
+    try { set(await compressPhoto(file)) } catch (x) { setErr(x.message) } finally { setBusy(false) }
+  }
+  const open = () => {
+    setBig(value.thumb)
+    if (value.full) setBig(value.full)
+    else if (value.file) getPhotoFile(value.file).then((full) => full && setBig((cur) => (cur === value.thumb ? full : cur)))
+  }
+  const btn = 'inline-flex items-center gap-1.5 rounded-xl border border-line bg-card px-3 py-2 text-sm text-muted transition hover:text-ink'
+  return (
+    <div className="flex items-center gap-2">
+      <input ref={input} type="file" accept="image/*" hidden onChange={pick} />
+      {value?.thumb && <img src={value.thumb} alt="Hoá đơn" onClick={open} className="h-12 w-12 shrink-0 cursor-zoom-in rounded-xl object-cover" />}
+      <button type="button" disabled={busy} onClick={() => input.current.click()} className={btn}>
+        {busy ? <Loader2 size={15} className="animate-spin" /> : <Camera size={15} />}
+        {compact ? (value?.thumb ? 'Đổi' : 'Hoá đơn') : value?.thumb ? 'Đổi ảnh' : 'Chụp / chọn hoá đơn'}
+      </button>
+      {value?.thumb && <button type="button" onClick={() => set(null)} className={btn}><X size={15} />{compact ? '' : ' Bỏ'}</button>}
+      {err && <span className="text-xs text-red-300">{err}</span>}
+      <Lightbox src={big} onClose={() => setBig(null)} />
+    </div>
+  )
+}
+
 export function FormSheet(props) {
   // Chỉ mount form khi mở, để mỗi lần mở lấy lại dữ liệu ban đầu
   return props.open ? <FormBody {...props} /> : null

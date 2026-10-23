@@ -1,9 +1,9 @@
-import { useState } from 'react'
-import { Check, Copy, Plus } from 'lucide-react'
-import { remove, save, useCollection } from '../store'
+import { useRef, useState } from 'react'
+import { Check, Copy, Plus, Receipt, Undo2 } from 'lucide-react'
+import { create, remove, removePhotoFile, save, useCollection, withReceipt } from '../store'
 import { CATS } from '../seed'
 import { catOf, useFundSummary } from './Fund'
-import { Btn, FormSheet, Loading, SectionTitle, confirmDelete, dayLabel, money, shortMoney, useForm } from '../components/ui'
+import { Btn, FormSheet, Loading, ReceiptInput, SectionTitle, confirmDelete, dayLabel, money, shortMoney, useForm } from '../components/ui'
 
 // Sổ chi: thủ quỹ ghi nhanh từng khoản cafe, ăn uống, xăng… trong chuyến đi.
 // Mỗi khoản là một expense { kind: 'log', status: 'paid', date, time }, nên Quỹ chung tự trừ theo.
@@ -17,8 +17,12 @@ const editFields = (members) => [
   { key: 'cat', label: 'Loại', type: 'select', options: CATS.map((c) => ({ value: c.key, label: `${c.icon} ${c.label}` })) },
   { key: 'date', label: 'Ngày', type: 'date' },
   { key: 'time', label: 'Giờ', type: 'time' },
-  { key: 'payer', label: 'Ai trả', type: 'select', options: [{ value: '', label: 'Quỹ chung' }, ...members.map((m) => ({ value: m.name, label: m.name }))] },
+  { key: 'payer', label: 'Ai trả', type: 'select', options: [{ value: '', label: 'Quỹ chung' }, ...members.map((m) => ({ value: m.name, label: `${m.name} ứng` }))] },
+  { key: 'split', label: 'Chia cho', type: 'people', options: members.map((m) => m.name) },
+  { key: 'receipt', label: 'Hoá đơn', type: 'receipt' },
+  { key: 'note', label: 'Ghi chú' },
 ]
+const isFood = (e) => (catOf(e.cat).budget || e.cat) === 'food'
 
 const selectCls = 'w-full appearance-none rounded-2xl border border-line bg-card px-4 py-3 text-base text-ink outline-none focus:border-brand sm:text-sm'
 
@@ -30,7 +34,10 @@ export default function Ledger() {
   const [title, setTitle] = useState('')
   const [date, setDate] = useState('')
   const [payer, setPayer] = useState('')
+  const [receipt, setReceipt] = useState(null)
   const [copied, setCopied] = useState(false)
+  const [last, setLast] = useState(null)
+  const timer = useRef(null)
   const editForm = useForm()
   if (!sum || !days) return <Loading />
 
@@ -48,15 +55,29 @@ export default function Ledger() {
   const byCat = CATS.map((c) => ({ ...c, sum: logs.filter((e) => e.cat === c.key).reduce((a, e) => a + (Number(e.amount) || 0), 0) }))
     .filter((c) => c.sum > 0).sort((a, b) => b.sum - a.sum)
   const dateOptions = [...new Set([today, ...days.map((d) => d.date).filter(Boolean)])].sort()
+  // Ngân sách ăn uống/ngày = các khoản ăn uống còn "Dự kiến" chia cho số ngày của chuyến
+  const foodBudget = sum.expenses.filter((e) => e.kind !== 'log' && e.status !== 'paid' && isFood(e)).reduce((a, e) => a + (Number(e.amount) || 0), 0)
+  const perDay = days.length ? foodBudget / days.length : 0
+  const todayFood = logs.filter((e) => e.date === today && isFood(e)).reduce((a, e) => a + (Number(e.amount) || 0), 0)
 
   const add = (e) => {
     e.preventDefault()
     if (!amount) return
-    save('expenses', null, {
+    const row = withReceipt({
       title: title.trim() || catOf(cat).label, amount, cat, status: 'paid', kind: 'log',
-      date: day, time: vnNow().slice(11, 16), payer, note: '',
+      date: day, time: vnNow().slice(11, 16), payer, note: '', receipt,
     })
-    setAmount(0); setTitle('')
+    const id = create('expenses', row)
+    setAmount(0); setTitle(''); setReceipt(null)
+    // báo đã ghi + cho hoàn tác trong 6 giây, lỡ ghi nhầm thì gỡ ngay
+    clearTimeout(timer.current)
+    setLast({ id, amount: row.amount, title: row.title, file: row.receipt?.file })
+    timer.current = setTimeout(() => setLast(null), 6000)
+  }
+  const undoLast = () => {
+    remove('expenses', last.id)
+    if (last.file) removePhotoFile(last.file)
+    clearTimeout(timer.current); setLast(null)
   }
 
   const copyReport = async () => {
@@ -64,7 +85,7 @@ export default function Ledger() {
     for (const d of [...dates].sort()) {
       const rows = logs.filter((e) => e.date === d)
       lines.push(`${dayName(d)}: ${money(rows.reduce((a, e) => a + (Number(e.amount) || 0), 0))}`)
-      rows.forEach((e) => lines.push(`  ${catOf(e.cat).icon} ${e.title} ${money(e.amount)}${e.payer ? ` (${e.payer} trả)` : ''}`))
+      rows.forEach((e) => lines.push(`  ${catOf(e.cat).icon} ${e.title} ${money(e.amount)}${e.payer ? ` (${e.payer} ứng)` : ''}`))
     }
     try { await navigator.clipboard.writeText(lines.join('\n')); setCopied(true); setTimeout(() => setCopied(false), 2000) } catch { /* ignore */ }
   }
@@ -81,6 +102,16 @@ export default function Ledger() {
           <div className="rounded-[28px] bg-card p-5">
             <div className="text-xs text-muted">Hôm nay chi</div>
             <div className="mt-1 text-2xl font-extrabold">{shortMoney(todayTotal)}</div>
+            {perDay > 0 && (
+              <div className="mt-2">
+                <div className="h-1.5 overflow-hidden rounded-full bg-card-2">
+                  <div className={`h-full rounded-full ${todayFood > perDay ? 'bg-red-400' : 'bg-ok'}`} style={{ width: `${Math.min(100, (todayFood / perDay) * 100)}%` }} />
+                </div>
+                <div className={`mt-1 text-[11px] ${todayFood > perDay ? 'text-red-300' : 'text-muted'}`}>
+                  Ăn uống {shortMoney(todayFood)} / {shortMoney(perDay)}{todayFood > perDay ? ' · vượt' : ''}
+                </div>
+              </div>
+            )}
           </div>
           <div className="rounded-[28px] bg-card p-5">
             <div className="text-xs text-muted">Tổng sổ chi</div>
@@ -118,13 +149,14 @@ export default function Ledger() {
         </div>
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={`Ghi chú (vd: ${cat === 'cafe' ? 'Cafe A Páo' : 'Lẩu gà đen phố cổ'})`}
           className="mt-3 w-full rounded-2xl border border-line bg-card px-4 py-3 text-base outline-none focus:border-brand sm:text-[15px]" />
+        <div className="mt-3"><ReceiptInput value={receipt} set={setReceipt} compact /></div>
         <div className="mt-3 grid grid-cols-2 gap-2">
           <select value={day} onChange={(e) => setDate(e.target.value)} className={selectCls}>
             {dateOptions.map((d) => <option key={d} value={d}>{d === today ? 'Hôm nay' : dayName(d)}</option>)}
           </select>
           <select value={payer} onChange={(e) => setPayer(e.target.value)} className={selectCls}>
             <option value="">Quỹ chung trả</option>
-            {sum.members.map((m) => <option key={m.id} value={m.name}>{m.name} trả</option>)}
+            {sum.members.map((m) => <option key={m.id} value={m.name}>{m.name} ứng</option>)}
           </select>
         </div>
         <Btn type="submit" disabled={!amount} className="mt-4 w-full py-3.5 text-base"><Plus size={18} /> Ghi lại {amount ? money(amount) : ''}</Btn>
@@ -164,8 +196,11 @@ export default function Ledger() {
                     <button key={e.id} onClick={() => editForm.open(e)} className="flex w-full items-center gap-3 rounded-2xl bg-card p-3 text-left transition hover:bg-card-2">
                       <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-card-2 text-xl">{catOf(e.cat).icon}</span>
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-[15px] font-semibold">{e.title}</div>
-                        <div className="text-xs text-muted">{e.time}{e.payer ? ` · ${e.payer} trả` : ''}</div>
+                        <div className="line-clamp-2 text-[15px] leading-snug font-semibold wrap-break-word">{e.title}</div>
+                        <div className="text-xs text-muted">
+                          {[e.time, e.payer && `${e.payer} ứng`, e.split?.length > 0 && `chia ${sum.splitOf(e).join(', ')}`].filter(Boolean).join(' · ')}
+                          {e.receipt && <Receipt size={12} className="ml-1 inline align-[-1px]" />}
+                        </div>
                       </div>
                       <span className="shrink-0 font-bold tabular-nums">{money(e.amount)}</span>
                     </button>
@@ -178,8 +213,19 @@ export default function Ledger() {
       </section>
 
       <FormSheet {...editForm.props} title="Sửa khoản chi" fields={editFields(sum.members)}
-        onSubmit={({ id, ...v }) => save('expenses', id, v)}
-        onDelete={() => confirmDelete('khoản chi này', () => remove('expenses', editForm.props.initial.id))} />
+        onSubmit={({ id, ...v }) => save('expenses', id, withReceipt(v, editForm.props.initial))}
+        onDelete={() => {
+          const e = editForm.props.initial
+          confirmDelete('khoản chi này', () => { remove('expenses', e.id); if (e.receipt?.file) removePhotoFile(e.receipt.file) })
+        }} />
+
+      {last && (
+        <div className="fixed inset-x-4 bottom-24 z-40 mx-auto flex max-w-md items-center gap-3 rounded-2xl border border-line bg-panel p-3 pl-4 shadow-2xl md:bottom-6">
+          <Check size={18} className="shrink-0 text-ok" />
+          <div className="min-w-0 flex-1 truncate text-sm">Đã ghi <b>{money(last.amount)}</b> · {last.title}</div>
+          <Btn variant="ghost" className="shrink-0 px-3! py-2! text-xs" onClick={undoLast}><Undo2 size={14} /> Hoàn tác</Btn>
+        </div>
+      )}
     </div>
   )
 }
