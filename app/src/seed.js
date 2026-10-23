@@ -179,7 +179,7 @@ export const NOTES = ord([
 
 // Gợi ý quán / chỗ chơi tra từ Foody, VnExpress, Vietnam Coracle, vietnam.travel (bài 2019–2024): giờ mở cửa có thể đã đổi.
 const maps = (q) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`
-const tip = (name, kind, area, note, q) => ({ name, kind, area, note, link: maps(q), img: '', by: 'Claude', votes: [], chosen: false })
+const tip = (name, kind, area, note, q) => ({ name, kind, area, note, link: maps(q), img: '', by: '', votes: [], chosen: false })
 
 export const SUGGESTIONS = ord([
   { name: 'Cafe A Páo', kind: 'cafe', area: 'Mã Pì Lèng', note: 'Ma Pi Leng Skywalk, ngay đỉnh đèo. Gửi xe ở đây để đi bộ lên mỏm đá Tử Thần (có trong lịch trình Day 4).', link: '', img: '', by: '', votes: [], chosen: true },
