@@ -3,7 +3,7 @@
 // ràng buộc: Day 1 (VJ128 17:20 → 19:30), tối Day 5 và Day 6 (VJ157 12:55).
 
 const img = (name) => `/img/stops/${name}.png`
-const FIGMA_DAY = (n) => `/img/figma/new/Day ${n}.png`
+const FIGMA_DAY = (n) => `/figma/Day ${n}.png`
 
 let n = 0
 const id = () => `s${++n}`

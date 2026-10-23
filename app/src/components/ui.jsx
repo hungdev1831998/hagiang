@@ -5,8 +5,9 @@ import { IMAGE_LIBRARY } from '../seed'
 
 export const EditContext = createContext({ edit: false })
 
-// Đường dẫn ảnh lưu dạng "/img/..."; thêm base để chạy được cả Firebase lẫn GitHub Pages (/<repo>/)
-export const asset = (p) => (p && p.startsWith('/') ? encodeURI(import.meta.env.BASE_URL + p.slice(1)) : p)
+// Đường dẫn ảnh lưu dạng "/img/..."; thêm base để chạy được cả Firebase lẫn GitHub Pages (/<repo>/).
+// Ảnh Figma đã dời từ /img/figma/new/ sang /figma/, dữ liệu cũ trên Firestore vẫn giữ đường dẫn cũ.
+export const asset = (p) => (p && p.startsWith('/') ? encodeURI(import.meta.env.BASE_URL + p.slice(1).replace(/^img\/figma\/new\//, 'figma/')) : p)
 
 // Cụm ảnh cắt từ Figma xếp chồng, dùng cho trang chủ và màn đăng nhập
 export function FigmaCollage({ className = '' }) {

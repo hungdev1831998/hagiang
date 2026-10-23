@@ -1,4 +1,4 @@
-// Plugin Vite: cắt ảnh từng điểm dừng từ bản export Figma (public/img/figma/new/Day N.png)
+// Plugin Vite: cắt ảnh từng điểm dừng từ bản export Figma (public/figma/Day N.png)
 // lúc dev và lúc build, không lưu file trung gian. Ảnh ra ở /img/stops/<tên>.png,
 // nền xám của card được xoá, giữ nguyên khung, viền trắng và icon drone như Figma.
 import fs from 'node:fs'
