@@ -177,8 +177,44 @@ export const NOTES = ord([
   { title: 'Chụp ảnh', body: 'Hỏi trước khi chụp người dân, không cho trẻ em tiền/kẹo để chụp ảnh, không leo lên mỏm đá nguy hiểm, mang rác về.' },
 ])
 
+// Gợi ý quán / chỗ chơi tra từ Foody, VnExpress, Vietnam Coracle, vietnam.travel (bài 2019–2024): giờ mở cửa có thể đã đổi.
+const maps = (q) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`
+const tip = (name, kind, area, note, q) => ({ name, kind, area, note, link: maps(q), img: '', by: 'Claude', votes: [], chosen: false })
+
 export const SUGGESTIONS = ord([
   { name: 'Cafe A Páo', kind: 'cafe', area: 'Mã Pì Lèng', note: 'Ma Pi Leng Skywalk, ngay đỉnh đèo. Gửi xe ở đây để đi bộ lên mỏm đá Tử Thần (có trong lịch trình Day 4).', link: '', img: '', by: '', votes: [], chosen: true },
+  // Hà Giang (thành phố)
+  tip('Cháo ấu tẩu Hương', 'food', 'Hà Giang', 'Món đặc sản phải thử, khoảng 30–50k/tô. Cháo ấu tẩu thường chỉ bán buổi tối.\nTổ 5 Trần Hưng Đạo, P. Nguyễn Trãi.', 'Cháo ấu tẩu Hương Trần Hưng Đạo Hà Giang'),
+  tip('Bà Hoa – Bánh cuốn', 'food', 'Hà Giang', 'Bánh cuốn Hà Giang ăn kèm nước dùng, hợp bữa sáng trước khi lên xe. Có review nói hơi béo hơn bánh cuốn Hà Nội.\nP. Minh Khai.', 'Bà Hoa Bánh Cuốn Minh Khai Hà Giang'),
+  tip('Phúc Coffee', 'cafe', 'Hà Giang', 'Đồ uống ngon, giá vừa phải, không gian dễ chịu.\n495 Nguyễn Trãi.', 'Phúc Coffee 495 Nguyễn Trãi Hà Giang'),
+  // Quản Bạ, Yên Minh (Day 2)
+  tip('Cafe Cổng Trời', 'cafe', 'Quản Bạ', 'Ngồi hiên nhìn xuống đoạn đèo quanh co. Có bán tinh dầu và thuốc tắm thảo dược của người Dao Đỏ.', 'Cafe Cổng Trời Quản Bạ'),
+  tip('Phong Vân Quán', 'food', 'Yên Minh', 'Món phở chua, phần ăn nhiều. Hợp ăn trưa dọc đường Day 2, giá hơi cao.\n233 Tổ 5, TT Yên Minh.', 'Phong Vân Quán Yên Minh'),
+  // Đồng Văn
+  tip('Cà Phê Phố Cổ', 'cafe', 'Đồng Văn', 'Nhà cổ 2 tầng quanh sân đá, sân hiên rộng ngắm chợ cổ. Buổi tối hay có văn nghệ tự phát.\n2 Nguyễn Trãi, góc chợ cổ.', 'Cà Phê Phố Cổ 2 Nguyễn Trãi Đồng Văn'),
+  tip('Phiên Coffee', 'cafe', 'Đồng Văn', 'Quán "chất" nhất phố cổ, ngồi ban công tầng 2 nhìn xuống chợ. Cà phê ngon, có bia thủ công Thơm.\n11 Phố Cổ.', 'Phiên Coffee Phố Cổ Đồng Văn'),
+  tip("H'mong Coffee", 'cafe', 'Đồng Văn', 'Nhân viên người Mông thân thiện, bàn gỗ có ổ cắm. Ngồi bàn vỉa hè buổi sáng nắng rất thích.\n10 QL4C.', "H'mong Coffee Đồng Văn"),
+  tip('Bò Thảo Dược – Cao Nguyên Đá', 'food', 'Đồng Văn', 'Bò nướng đá, cà phê được khen, kiến trúc lạ. Foody chấm 9.7.\nKhu chợ cổ Đồng Văn.', 'Bò Thảo Dược Cao Nguyên Đá Đồng Văn'),
+  tip('Cháo Ấu Tẩu & Bánh Cuốn', 'food', 'Đồng Văn', 'Bánh cuốn Đồng Văn ăn với nước dùng xương, khoảng 30k. Review về cháo trái chiều (củ ấu hơi đắng).\nQL4C, TT Đồng Văn.', 'Cháo Ấu Tẩu Bánh Cuốn Đồng Văn'),
+  tip('Quán cháo Mộc Miên', 'food', 'Đồng Văn', 'VnExpress gợi ý cho bữa tối muộn ở phố cổ.', 'Cháo Mộc Miên Đồng Văn'),
+  tip('Hải Hiền – Cơm Lẩu', 'food', 'Đồng Văn', 'Thắng cố, lẩu bò, lẩu gà đen theo nồi, hợp nhóm 4 người.\nTổ 3, TT Đồng Văn.', 'Hải Hiền Cơm Lẩu Đồng Văn'),
+  tip('Thắng dền phố cổ', 'food', 'Đồng Văn', 'Hàng rong buổi tối, 5–15k/bát. Ăn nóng khi dạo phố cổ.', 'Phố cổ Đồng Văn'),
+  tip('Cafe Cực Bắc', 'cafe', 'Đồng Văn', 'Quán trong ngôi nhà cổ nhất bản Lô Lô Chải, tường đất, mái ngói. Ngồi nghỉ sau khi lên cột cờ Lũng Cú.\nCó bản lưu Foody ghi đã đóng cửa, nên kiểm tra lại.', 'Cafe Cực Bắc Lô Lô Chải Lũng Cú'),
+  // Hà Nội (sáng Day 6)
+  tip('Phở Bát Đàn', 'food', 'Hà Nội', 'Phở bò gia truyền, mở từ sáng sớm, thường phải xếp hàng.\n49 Bát Đàn.', 'Phở Bát Đàn 49 Bát Đàn Hà Nội'),
+  tip('Bánh cuốn Thanh Vân', 'food', 'Hà Nội', 'Bánh cuốn nóng kiểu Hà Nội.\n14 Hàng Gà.', 'Bánh cuốn Thanh Vân 14 Hàng Gà Hà Nội'),
+  tip('Xôi Yến', 'food', 'Hà Nội', 'Xôi xéo, xôi pate, ăn nhanh trước khi ra sân bay.\n35B Nguyễn Hữu Huân.', 'Xôi Yến 35B Nguyễn Hữu Huân Hà Nội'),
+  tip('Cafe Giảng', 'cafe', 'Hà Nội', 'Cà phê trứng "gốc" của Hà Nội.\n39 Nguyễn Hữu Huân.', 'Cafe Giảng 39 Nguyễn Hữu Huân Hà Nội'),
+  // Chỗ chơi
+  tip('Núi đôi Cô Tiên', 'other', 'Quản Bạ', 'Ngay dưới Cổng Trời, danh thắng quốc gia. Vé 20–30k, xem 30–45 phút. Tháng 12 hay có sương, nên tới trước 9h.', 'Núi đôi Cô Tiên Quản Bạ'),
+  tip('Động Lùng Khúy', 'other', 'Quản Bạ', 'Hang thạch nhũ, vé khoảng 50k. Rẽ vào hơn 10 km từ Tam Sơn, mất thêm 1,5–2 tiếng. Chỉ đi nếu dư thời gian.', 'Động Lùng Khúy Quản Bạ'),
+  tip('Rừng thông Yên Minh', 'other', 'Yên Minh', 'Ngay trên QL4C (xã Na Khê), được ví như "Đà Lạt thu nhỏ". Ghé 15 phút chụp ảnh, nghỉ chân.', 'Rừng thông Yên Minh'),
+  tip('Làng cổ Phố Cáo', 'other', 'Đồng Văn', 'Làng người Mông còn giữ nét xưa, ít bị thương mại hoá, nằm trên đường Day 2. Chợ ở đây là chợ lùi, 6 ngày họp một lần.', 'Phố Cáo Đồng Văn'),
+  tip('Thung lũng Sủng Là', 'other', 'Đồng Văn', 'Ngay cạnh Nhà Pao. Tháng 11–12 có hoa tam giác mạch, đầu tháng 12 có thể đã tàn bớt.', 'Thung lũng Sủng Là Đồng Văn'),
+  tip('Bản Lô Lô Chải', 'other', 'Đồng Văn', 'Dưới chân cột cờ Lũng Cú (cách 1 km). Dạo bản nhà tường đất, ghé Cafe Cực Bắc.', 'Lô Lô Chải Lũng Cú'),
+  tip('Chợ phiên Mèo Vạc', 'other', 'Mèo Vạc', 'Họp sáng Chủ nhật, từ 4–5h sáng, tan trước trưa. Dự phòng nếu không kịp chợ phiên Đồng Văn (cũng họp sáng Chủ nhật).', 'Chợ Mèo Vạc'),
+  tip('Dạo Hồ Gươm, phố cổ', 'other', 'Hà Nội', 'Sáng Day 6 sau khi xuống xe đêm, đi bộ ngay cạnh các quán ăn sáng phố cổ.', 'Hồ Hoàn Kiếm Hà Nội'),
+  tip('Mã Pì Lèng Panorama', 'cafe', 'Mã Pì Lèng', 'Toà nhà 7 tầng giữa đèo, view thẳng xuống thung lũng Tu Sản và sông Nho Quế.\nTừng gây tranh cãi vì xây không phép (2019–2021) và bị yêu cầu tạm ngừng kinh doanh, nên kiểm tra còn mở không.', 'Mã Pì Lèng Panorama'),
 ])
 
 const CAPTIONS = {
