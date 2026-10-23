@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { Download, Pencil, Plus, RotateCcw, Trash2, Undo2, Upload } from 'lucide-react'
-import { downloadJson, exportData, getMyName, importData, undo, useHistory } from '../store'
-import { Btn, Loading, SectionTitle, askConfirm, money } from '../components/ui'
+import { downloadJson, exportData, getMyName, importData, removeHistory, undo, useHistory } from '../store'
+import { Btn, IconBtn, Loading, SectionTitle, askConfirm, money, useEdit } from '../components/ui'
 
 const COL_LABEL = {
   days: 'Lịch trình', members: 'Thành viên', expenses: 'Quỹ / Sổ chi', checklist: 'Checklist',
@@ -40,6 +40,24 @@ const timeAgo = (t) => {
   if (m < 24 * 60) return `${Math.round(m / 60)} giờ trước`
   return new Date(t).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
+// Gộp các lần sửa liên tiếp của cùng người trên cùng mục (cách nhau ≤ 10 phút) thành 1 dòng.
+// items xếp mới → cũ; dòng gộp lấy after của lần mới nhất, before của lần cũ nhất (base) để hoàn tác.
+const MERGE_GAP = 10 * 6e4
+function mergeRuns(items) {
+  const runs = []
+  for (const e of items) {
+    const run = runs.at(-1), prev = run?.at(-1)
+    const same = prev && e.action === 'update' && prev.action === 'update' && !e.undone && !prev.undone
+      && e.col === prev.col && e.docId === prev.docId && e.by === prev.by && prev.at - e.at <= MERGE_GAP
+    if (same) run.push(e)
+    else runs.push([e])
+  }
+  return runs.map((run) => {
+    const base = run.at(-1)
+    return { ...run[0], before: base.before, base, ids: run.map((x) => x.id), count: run.length }
+  })
+}
+
 const dayKey = (t) => new Date(t).toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit' })
 const stamp = () => new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 16).replace(/[-:T]/g, '')
 
@@ -95,11 +113,12 @@ function Backup() {
 
 export default function History() {
   const items = useHistory()
+  const edit = useEdit()
   if (!items) return <Loading />
 
   const doUndo = (e) => {
     // có thay đổi mới hơn trên cùng mục thì cảnh báo sẽ ghi đè
-    const newer = items.some((x) => x.docId === e.docId && x.col === e.col && x.at > e.at && x.id !== e.id)
+    const newer = items.some((x) => x.docId === e.docId && x.col === e.col && x.at > e.at && !e.ids.includes(x.id))
     const what = nameOf(e.before) || nameOf(e.after) || COL_LABEL[e.col]
     askConfirm({
       title: `Hoàn tác "${what}"?`,
@@ -107,12 +126,19 @@ export default function History() {
         ? 'Mục này đã được sửa thêm sau đó. Hoàn tác sẽ trả về bản trước lần thay đổi này, ghi đè cả các lần sửa sau.'
         : e.action === 'create' ? 'Mục vừa thêm sẽ bị gỡ đi.' : 'Mục này sẽ trở lại như trước khi thay đổi.',
       confirmLabel: 'Hoàn tác', icon: <Undo2 size={24} />,
-      onYes: () => undo(e),
+      onYes: () => undo(e.base, e.ids.filter((id) => id !== e.base.id)),
     })
   }
 
+  const doDelete = (e) => askConfirm({
+    title: e.count > 1 ? `Xoá ${e.count} dòng lịch sử?` : 'Xoá dòng lịch sử này?',
+    message: 'Chỉ xoá dòng ghi chép, dữ liệu vẫn giữ nguyên. Xoá rồi thì không hoàn tác thay đổi này được nữa.',
+    confirmLabel: 'Xoá', danger: true, icon: <Trash2 size={24} />,
+    onYes: () => removeHistory(e.ids),
+  })
+
   const groups = []
-  for (const e of items) {
+  for (const e of mergeRuns(items)) {
     const k = dayKey(e.at)
     if (groups.at(-1)?.k !== k) groups.push({ k, rows: [] })
     groups.at(-1).rows.push(e)
@@ -140,13 +166,14 @@ export default function History() {
                 <div key={e.id} className={`flex items-center gap-3 rounded-2xl bg-card p-3 ${e.undone ? 'opacity-50' : ''}`}>
                   <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${A.cls}`}><A.icon size={17} /></span>
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm"><b>{A.label}</b> {what}</div>
+                    <div className="truncate text-sm"><b>{A.label}</b> {what}{e.count > 1 && <span className="text-muted"> · {e.count} lần</span>}</div>
                     <div className="truncate text-xs text-muted">
                       {[COL_LABEL[e.col], describe(e), e.by || 'ai đó', timeAgo(e.at)].filter(Boolean).join(' · ')}
                     </div>
                   </div>
                   {canUndo && <Btn variant="ghost" className="!px-3 !py-2 text-xs" onClick={() => doUndo(e)}><Undo2 size={14} /> Hoàn tác</Btn>}
                   {e.undone && <span className="shrink-0 text-xs text-muted">Đã hoàn tác</span>}
+                  {edit && <IconBtn onClick={() => doDelete(e)} aria-label="Xoá dòng" className="shrink-0 !text-red-300"><Trash2 size={15} /></IconBtn>}
                 </div>
               )
             })}

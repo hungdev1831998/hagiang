@@ -108,13 +108,21 @@ export async function remove(name, id) {
 }
 
 // Trả tài liệu về trạng thái trước thay đổi (ghi đè toàn bộ, không merge)
-export async function undo(entry) {
+// alsoIds: các lần sửa sau đã gộp chung dòng với entry, cũng đánh dấu đã hoàn tác
+export async function undo(entry, alsoIds = []) {
   const { col, docId, before } = entry
   const now = await readDoc(col, docId)
   if (before) await setDoc(docRef(col, docId), before)
   else await deleteDoc(docRef(col, docId))
   record({ col, docId, action: 'undo', before: now, after: before, undoOf: entry.id })
-  await setDoc(docRef('history', entry.id), { undone: true }, { merge: true })
+  await Promise.all([entry.id, ...alsoIds].map((id) => setDoc(docRef('history', id), { undone: true }, { merge: true })))
+}
+
+// Chỉ xoá dòng ghi chép, dữ liệu thật giữ nguyên; xoá rồi thì không hoàn tác thay đổi đó được nữa
+export async function removeHistory(ids) {
+  const b = writeBatch(db)
+  ids.forEach((id) => b.delete(docRef('history', id)))
+  await b.commit()
 }
 
 export function useHistory(n = 200) {
