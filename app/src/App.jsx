@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { CalendarDays, Check, Coffee, Ellipsis, History as HistoryIcon, Home as HomeIcon, Images, ListChecks, LogOut, NotebookPen, Pencil, Wallet, Lock, Loader2 } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { CalendarDays, Check, Coffee, Ellipsis, History as HistoryIcon, Home as HomeIcon, Images, ListChecks, LogOut, NotebookPen, Pencil, Wallet, Lock, Loader2, Eye, EyeOff } from 'lucide-react'
 import { getMyName, hasKey, login, logout, setMyName, useCollection } from './store'
 import { useRoute, to } from './router'
 import { ConfirmHost, EditContext, FigmaCollage, Sheet, askConfirm } from './components/ui'
@@ -48,11 +48,21 @@ function Login({ onDone }) {
   const [pw, setPw] = useState('')
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
+  const [show, setShow] = useState(false)
+  const input = useRef(null)
+  const box = useRef(null)
+  // Rung ngay trên ô hiện có (không tạo lại ô: ô mật khẩu mới sẽ bị trình duyệt tự điền mật khẩu đã lưu)
+  const fail = (msg) => {
+    setErr(msg)
+    input.current?.focus()
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches)
+      box.current?.animate([{ translate: '0' }, { translate: '-6px 0' }, { translate: '6px 0' }, { translate: '-6px 0' }, { translate: '6px 0' }, { translate: '0' }], { duration: 350, easing: 'ease' })
+  }
   const submit = async (e) => {
     e.preventDefault()
-    if (!pw) return
+    if (!pw.trim()) return fail('Nhập mật khẩu nhóm trước nhé')
     setBusy(true); setErr('')
-    try { await login(pw); onDone() } catch (e2) { setErr(e2.message) } finally { setBusy(false) }
+    try { await login(pw); onDone() } catch (e2) { fail(e2.message) } finally { setBusy(false) }
   }
   return (
     <div className="relative grid min-h-svh place-items-center overflow-hidden px-5">
@@ -65,9 +75,17 @@ function Login({ onDone }) {
         </div>
         <div className="rounded-[28px] border border-line bg-panel/90 p-6 backdrop-blur">
           <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-muted"><Lock size={15} /> Mật khẩu của nhóm</label>
-          <input type="password" inputMode="numeric" autoFocus value={pw} onChange={(e) => setPw(e.target.value)} placeholder="••••••"
-            className="w-full rounded-2xl border border-line bg-card px-4 py-3.5 text-center text-xl tracking-[.4em] outline-none focus:border-brand" />
-          {err && <p className="mt-3 text-center text-sm text-red-300">{err}</p>}
+          <div ref={box} className="relative">
+            <input ref={input} type={show ? 'text' : 'password'} inputMode="numeric" autoComplete="current-password" autoFocus value={pw} placeholder="Nhập mật khẩu"
+              onChange={(e) => { setPw(e.target.value); if (err) setErr('') }}
+              aria-invalid={!!err} aria-describedby={err ? 'login-err' : undefined}
+              className={`w-full rounded-2xl border bg-card px-12 py-3.5 text-center text-xl tracking-[.4em] outline-none placeholder:text-base placeholder:tracking-normal placeholder:text-muted/60 ${err ? 'border-red-400 focus:border-red-400' : 'border-line focus:border-brand'}`} />
+            <button type="button" onClick={() => { setShow((s) => !s); input.current?.focus() }} aria-label={show ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+              className="absolute top-1/2 right-2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-xl text-muted transition hover:text-ink">
+              {show ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
+          {err && <p id="login-err" role="alert" className="mt-3 text-center text-sm text-red-300">{err}</p>}
           <button disabled={busy} className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-brand py-3.5 font-bold text-white transition hover:bg-brand-2 disabled:opacity-60">
             {busy ? <Loader2 size={18} className="animate-spin" /> : 'Vào xem lịch trình'}
           </button>
