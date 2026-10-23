@@ -124,6 +124,24 @@ export function useHistory(n = 200) {
   return items
 }
 
+// ---- Ảnh nhóm tự chụp / up ----
+// photos/{id} chỉ giữ ảnh nhỏ (thumb) + chú thích, nên danh sách, lịch sử và backup vẫn nhẹ.
+// Ảnh lớn nằm riêng ở photoFiles/{id}, chỉ tải khi mở xem; không ghi lịch sử, không vào backup.
+export const newId = (name) => doc(colRef(name)).id
+
+export function addUploadedPhoto(id, { full, thumb, ...meta }) {
+  // không chờ server: offline vẫn thêm được, có sóng Firestore tự gửi
+  const file = setDoc(docRef('photoFiles', id), { data: full })
+  const row = save('photos', id, { ...meta, thumb, file: id, order: Date.now() })
+  return Promise.all([file, row])
+}
+
+export async function getPhotoFile(id) {
+  try { const s = await getDoc(docRef('photoFiles', id)); return s.exists() ? s.data().data : null } catch { return null }
+}
+
+export const removePhotoFile = (id) => deleteDoc(docRef('photoFiles', id)).catch(() => {})
+
 // ---- Backup ra file / nạp lại ----
 export const BACKUP_COLS = ['meta', 'days', 'members', 'expenses', 'checklist', 'contacts', 'notes', 'photos', 'suggestions']
 
