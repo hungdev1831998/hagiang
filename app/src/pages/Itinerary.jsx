@@ -1,15 +1,18 @@
 import { useState } from 'react'
-import { Camera, MapPinned, Plus, Pencil, Trash2 } from 'lucide-react'
+import { Camera, MapPin, MapPinned, Navigation, Plus, Pencil, Trash2 } from 'lucide-react'
 import { remove, save, useCollection } from '../store'
+import { MODES, dayRouteUrl, locOf, navUrl, placeUrl } from '../maps'
 import { AddButton, Btn, EditTools, FormSheet, Lightbox, Loading, Segmented, asset, confirmDelete, dayLabel, useEdit, useForm } from '../components/ui'
 
 const STOP_FIELDS = [
   { key: 'title', label: 'Tên điểm dừng' },
   { key: 'time', label: 'Giờ tới', placeholder: '09:30' },
   { key: 'desc', label: 'Mô tả', type: 'textarea' },
+  { key: 'loc', label: 'Vị trí trên bản đồ', placeholder: 'Toạ độ 23.2784,105.3485 hoặc link Google Maps đầy đủ' },
   { key: 'items', label: 'Hoạt động', type: 'items' },
   { key: 'icon', label: 'Biểu tượng (emoji)', placeholder: '📍' },
   { key: 'img', label: 'Ảnh', type: 'image' },
+  { key: 'legMode', label: 'Đi tới điểm tiếp theo bằng', type: 'select', options: MODES },
   { key: 'legKm', label: 'Quãng đường tới điểm tiếp theo', placeholder: '12km' },
   { key: 'legDur', label: 'Thời gian di chuyển', placeholder: '30p' },
   { key: 'legFrom', label: 'Giờ rời điểm này', placeholder: '10:00' },
@@ -25,17 +28,26 @@ const DAY_FIELDS = [
 
 const todayIso = () => new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 10)
 
-// Đoạn đường nối 2 điểm: giờ rời điểm trước → km, thời gian → giờ tới điểm sau (như nét đứt trong Figma)
-function Leg({ leg }) {
+// Đoạn đường nối 2 điểm: giờ rời điểm trước → km, thời gian → giờ tới điểm sau (như nét đứt trong Figma).
+// Nút "Đi tới" mở dẫn đường Google Maps từ vị trí hiện tại tới điểm sau (xe máy / ô tô); chặng máy bay thì không.
+function Leg({ leg, next }) {
+  const flight = leg?.mode === 'flight'
+  const dest = !flight && locOf(next)
   return (
     <div className="relative h-28 pl-[27px]">
       <div className="dash-v absolute top-0 bottom-0 left-[27px] w-[2px]" />
       {leg?.from && <span className="absolute top-2 right-6 text-xs font-semibold tabular-nums text-muted">rời {leg.from}</span>}
-      {(leg?.km || leg?.dur) && (
+      {(leg?.km || leg?.dur || flight) && (
         <div className="absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1 text-xs">
-          {leg.km && <span className="font-bold text-ink">{leg.km}</span>}
+          {(leg.km || flight) && <span className="font-bold text-ink">{flight ? '✈️ ' : ''}{leg.km}</span>}
           {leg.dur && <span className="-rotate-2 rounded-lg bg-ink px-3 py-1 font-bold text-bg shadow">{leg.dur}</span>}
         </div>
+      )}
+      {dest && (
+        <a href={navUrl(dest)} target="_blank" rel="noreferrer" aria-label={`Dẫn đường tới ${next.title}`}
+          className="absolute top-1/2 right-4 flex -translate-y-1/2 items-center gap-1.5 rounded-full bg-brand/15 px-3 py-2 text-xs font-bold text-brand transition hover:bg-brand/25">
+          <Navigation size={13} /> Đi tới
+        </a>
       )}
       {leg?.to && <span className="absolute bottom-2 left-12 text-xs font-semibold tabular-nums text-muted">tới {leg.to}</span>}
     </div>
@@ -53,6 +65,11 @@ function StopCard({ s, onEdit, onDelete, onUp, onDown, onImg }) {
             <div className="mb-1 inline-flex rounded-lg bg-brand/15 px-2 py-0.5 text-xs font-bold text-brand">{s.time}</div>
             <h3 className="text-lg leading-snug font-bold">{s.title}</h3>
             {s.desc && <p className="mt-1 text-[13px] leading-relaxed text-muted">{s.desc}</p>}
+            {locOf(s) && (
+              <a href={placeUrl(locOf(s))} target="_blank" rel="noreferrer" className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-brand underline-offset-2 hover:underline">
+                <MapPin size={12} /> Bản đồ
+              </a>
+            )}
           </div>
           <EditTools onEdit={onEdit} onDelete={onDelete} onUp={onUp} onDown={onDown} />
         </div>
@@ -104,8 +121,11 @@ export default function Itinerary() {
 
   const setStops = (next) => save('days', day.id, { stops: next })
   const submitStop = (v) => {
-    const { legKm, legDur, legFrom, legTo, ...rest } = v
-    const s = { icon: '📍', desc: '', img: '', items: [], ...rest, leg: legKm || legDur || legFrom || legTo ? { km: legKm || '', dur: legDur || '', from: legFrom || '', to: legTo || '' } : null }
+    const { legKm, legDur, legFrom, legTo, legMode, ...rest } = v
+    const s = {
+      icon: '📍', desc: '', img: '', items: [], loc: '', ...rest,
+      leg: legKm || legDur || legFrom || legTo || legMode ? { km: legKm || '', dur: legDur || '', from: legFrom || '', to: legTo || '', mode: legMode || '' } : null,
+    }
     const i = stopForm.meta?.index
     if (i == null) setStops([...stops, { ...s, id: `s${Date.now()}` }])
     else setStops(stops.map((x, j) => (j === i ? { ...x, ...s } : x)))
@@ -115,7 +135,7 @@ export default function Itinerary() {
     const next = [...stops];[next[i], next[j]] = [next[j], next[i]]
     setStops(next)
   }
-  const mapUrl = `https://www.google.com/maps/dir/${stops.map((s) => encodeURIComponent(`${s.title.replace(/\(.*?\)/g, '')} Hà Giang`)).join('/')}`
+  const mapUrl = dayRouteUrl(stops)
 
   return (
     <div>
@@ -157,7 +177,7 @@ export default function Itinerary() {
             <div className="flex gap-2">
               {edit && <Btn variant="ghost" onClick={() => dayForm.open(day)}><Pencil size={15} /> Sửa ngày</Btn>}
               {edit && <Btn variant="danger" onClick={() => confirmDelete(`Day ${idx + 1}`, () => { remove('days', day.id); setActive(null) })}><Trash2 size={15} /></Btn>}
-              {!edit && stops.length > 1 && <a href={mapUrl} target="_blank" rel="noreferrer"><Btn variant="ghost"><MapPinned size={16} /> Chỉ đường</Btn></a>}
+              {!edit && mapUrl && <a href={mapUrl} target="_blank" rel="noreferrer"><Btn variant="ghost"><MapPinned size={16} /> Chỉ đường</Btn></a>}
             </div>
           </div>
 
@@ -171,11 +191,11 @@ export default function Itinerary() {
               {stops.map((s, i) => (
                 <div key={s.id}>
                   <StopCard s={s} onImg={setImg}
-                    onEdit={() => stopForm.open({ ...s, legKm: s.leg?.km, legDur: s.leg?.dur, legFrom: s.leg?.from, legTo: s.leg?.to }, { index: i })}
+                    onEdit={() => stopForm.open({ ...s, legKm: s.leg?.km, legDur: s.leg?.dur, legFrom: s.leg?.from, legTo: s.leg?.to, legMode: s.leg?.mode || '' }, { index: i })}
                     onDelete={() => confirmDelete(`"${s.title}"`, () => setStops(stops.filter((_, j) => j !== i)))}
                     onUp={i > 0 ? () => move(i, i - 1) : null}
                     onDown={i < stops.length - 1 ? () => move(i, i + 1) : null} />
-                  {i < stops.length - 1 && <Leg leg={s.leg} />}
+                  {i < stops.length - 1 && <Leg leg={s.leg} next={stops[i + 1]} />}
                 </div>
               ))}
               {stops.length === 0 && <p className="py-10 text-center text-muted">Chưa có điểm dừng nào.</p>}

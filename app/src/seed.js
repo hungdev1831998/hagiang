@@ -7,9 +7,24 @@ const FIGMA_DAY = (n) => `/figma/Day ${n}.png`
 
 let n = 0
 const id = () => `s${++n}`
+// Vị trí trên bản đồ của từng điểm dừng (theo tên), tra trên Google Maps 10/2026. Điểm chỉ là hoạt động
+// (trả phòng, ăn sáng…) dùng vị trí nơi ở. Điểm đón xe gần Nội Bài chưa chốt nên để trống.
+const CICI = '23.278421,105.348532', OCHAU = '23.206792,105.416675', GIANG_SON = '22.801008,104.980493'
+export const STOP_LOCS = {
+  'Tân Sơn Nhất': '10.813939,106.662709', 'Sân bay Tân Sơn Nhất': '10.813939,106.662709', 'Sân bay Nội Bài': '21.214525,105.802514',
+  'Giang Sơn': GIANG_SON, 'Dốc Bắc Sum': '22.992112,104.930303', 'Cổng trời Quản Bạ': '23.049282,104.992677',
+  'Phở Tráng Kìm': '23.065561,104.994216', 'Dốc Thẩm Mã': '23.169387,105.194686', 'Nhà Pao': '23.225789,105.203760',
+  'Cici Homestay - Đồng Văn': CICI, 'Về Cici Homestay': CICI, 'Trả phòng': CICI,
+  'Chợ phiên, phố cổ': '23.277074,105.361235', 'Dinh Vua Mèo': '23.256285,105.262126', 'Điểm cực Bắc, Lũng Cú': '23.363406,105.316300',
+  'Cafe A Páo': '23.243095,105.397883', 'Mỏm Đá Tử Thần': '23.242899,105.397308', 'Đèo Mã Pì Lèng': '23.227269,105.418095',
+  'Sông Nho Quế': '23.230298,105.430690', "O'Chau Meo Vac Homestay": OCHAU, 'Ăn sáng, chụp ảnh': OCHAU,
+  'Cua chữ M': '23.105822,105.259950', 'Mậu Duệ': '23.068512,105.237034', 'Ngã Ba Hữu Vinh': '23.122910,105.164787',
+  'Lên xe về Hà Nội': '22.822498,104.987934', 'Ăn sáng, cafe Hà Nội': '21.033585,105.855242',
+}
 // leg = đoạn đường từ điểm này tới điểm sau: km, thời gian, giờ đi, giờ tới (giống đường nét đứt trong Figma)
-const stop = ({ items = [], ...s }) => ({ id: id(), desc: '', img: '', icon: '📍', leg: null, ...s, items: items.map((it) => ({ id: id(), ...it })) })
-const leg = (km, dur, from, to) => ({ km, dur, from, to })
+// mode: '' = xe máy, 'car' = ô tô / taxi, 'flight' = máy bay (chỉ đường bỏ qua chặng này)
+const stop = ({ items = [], ...s }) => ({ id: id(), desc: '', img: '', icon: '📍', leg: null, loc: STOP_LOCS[s.title] || '', ...s, items: items.map((it) => ({ id: id(), ...it })) })
+const leg = (km, dur, from, to, mode = '') => ({ km, dur, from, to, mode })
 
 export const DAYS = [
   {
@@ -17,10 +32,10 @@ export const DAYS = [
     stops: [
       stop({ time: '15:15', icon: '🛫', img: img('tan-son-nhat'), title: 'Tân Sơn Nhất', desc: 'Kiểm tra hành lí, căn cước chuẩn bị bay đến Nội Bài',
         items: [{ label: 'Tập trung, kiểm tra lần nữa', time: '15:15' }, { label: 'VIETJET AIR', time: 'VJ128 | T1' }, { label: 'Cất cánh', time: '17:20' }],
-        leg: leg('1.160km', '2h 10p', '17:20', '19:30') }),
+        leg: leg('1.160km', '2h 10p', '17:20', '19:30', 'flight') }),
       stop({ time: '19:30', icon: '🛬', img: img('noi-bai'), title: 'Sân bay Nội Bài', desc: 'Xuống máy bay, vệ sinh cá nhân, nghỉ ngơi nhanh, chuẩn bị lên xe đi Hà Giang',
         items: [{ label: 'Hạ cánh', time: '19:30' }, { label: 'Lấy hành lí', time: '19:40 - 20:25' }, { label: 'Vệ sinh cá nhân', time: '20:25 - 20:55' }],
-        leg: leg('', '15p', '20:55', '21:10') }),
+        leg: leg('', '15p', '20:55', '21:10', 'car') }),
       stop({ time: '21:10', icon: '🚌', img: img('xe-giuong-nam'), title: 'Lên xe đến Hà Giang', desc: 'Kiểm tra hành lí đầy đủ trước khi lên xe, cố gắng ngủ để mai đi sớm',
         items: [{ label: 'Xe Bằng Phấn', time: '0917.898.898' }, { label: 'Lên xe', time: '21:10' }] }),
     ],
@@ -89,7 +104,7 @@ export const DAYS = [
         items: [{ label: 'Ăn trưa, nghỉ ngơi', time: '12:30 - 13:30' }], leg: leg('110km', '4h', '13:30', '17:30') }),
       stop({ time: '17:30', icon: '🛵', img: img('giang-son'), title: 'Giang Sơn', desc: 'Trả xe, thanh toán, tắm rửa. Mua quà thì mua tối nay. Không ngủ lại: đi xe đêm về Hà Nội để kịp chuyến bay 12:55 ngày mai.',
         items: [{ label: 'Lấy phòng, tắm rửa', time: '17:30 - 18:30' }, { label: 'Phở chua 93 Nguyễn Trãi', time: '18:30 - 19:30' }, { label: 'Dạo phố, mua quà', time: '19:30 - 21:30' }],
-        leg: leg('', '15p', '21:45', '22:00') }),
+        leg: leg('', '15p', '21:45', '22:00', 'car') }),
       stop({ time: '22:00', icon: '🚌', img: img('xe-giuong-nam'), title: 'Lên xe về Hà Nội', desc: 'Kiểm tra hành lí, giấy tờ đầy đủ trước khi lên xe, ngủ trên xe',
         items: [{ label: 'Xe Bằng Phấn', time: '0917.898.898' }, { label: 'Lên xe', time: '22:00' }] }),
     ],
@@ -99,10 +114,10 @@ export const DAYS = [
     stops: [
       stop({ time: '04:00', icon: '☕', img: img('cafe-sang'), title: 'Ăn sáng, cafe Hà Nội', desc: 'Xe trả khách ở Hà Nội. Vệ sinh, ăn sáng cafe, chuẩn bị ra Nội Bài',
         items: [{ label: 'Xuống xe, vệ sinh, nghỉ ngơi', time: '04:00 - 06:30' }, { label: 'Ăn sáng, cafe', time: '06:30 - 09:30' }, { label: 'Đi Nội Bài', time: '10:00' }],
-        leg: leg('30km', '45p', '10:00', '10:45') }),
+        leg: leg('30km', '45p', '10:00', '10:45', 'car') }),
       stop({ time: '10:45', icon: '✈️', img: img('may-bay-noi-bai'), title: 'Sân bay Nội Bài', desc: 'Bắt taxi vào sân bay, làm thủ tục sớm',
         items: [{ label: 'Vệ sinh, nghỉ ngơi', time: '10:45 - 11:00' }, { label: 'Làm thủ tục', time: '11:00 - 12:00' }, { label: 'Fly ------>', time: '12:55' }],
-        leg: leg('1.160km', '2h 10p', '12:55', '15:05') }),
+        leg: leg('1.160km', '2h 10p', '12:55', '15:05', 'flight') }),
       stop({ time: '15:05', icon: '🏙️', img: img('sai-gon'), title: 'Sân bay Tân Sơn Nhất', desc: 'Welcome back!',
         items: [{ label: 'Giải tán!', time: 'Bye mọi người!' }] }),
     ],

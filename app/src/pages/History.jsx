@@ -20,7 +20,7 @@ const FIELD_LABEL = {
   desc: 'mô tả', items: 'hoạt động', leg: 'đường đi', icon: 'icon', weather: 'thời tiết', caption: 'chú thích', credit: 'nguồn',
   kind: 'loại', area: 'khu vực', link: 'link', chosen: 'chốt', by: 'người đề xuất', flights: 'chuyến bay',
   km: 'quãng đường', dur: 'thời gian', from: 'giờ đi', to: 'giờ tới', label: 'tên', code: 'mã',
-  split: 'chia cho', contribs: 'các lần góp', receipt: 'hoá đơn',
+  split: 'chia cho', contribs: 'các lần góp', receipt: 'hoá đơn', loc: 'vị trí', mode: 'đi bằng',
 }
 // Trường kỹ thuật không hiện; trường ảnh chỉ báo "đổi ảnh" (có thể là dataURL rất dài)
 const HIDDEN = new Set(['id', 'order', 'votes', 'thumb', 'file'])
