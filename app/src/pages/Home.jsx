@@ -4,6 +4,7 @@ import { ArrowRight, MessageCircle, Plane, Phone } from 'lucide-react'
 import { save, useCollection, useDocument } from '../store'
 import { useFundSummary } from './Fund'
 import { EditTools, FormSheet, asset, SectionTitle, dayLabel, shortMoney, useForm } from '../components/ui'
+import { socialOf } from '../components/social'
 
 const FLIGHT_FIELDS = [
   { key: 'dir', label: 'Chiều', placeholder: 'Chiều đi' }, { key: 'code', label: 'Chuyến bay', placeholder: 'VJ128' },
@@ -183,7 +184,7 @@ export default function Home() {
           <SectionTitle eyebrow="Gọi nhanh" title="Nhà xe & homestay" right={<a href={to('chuan-bi')} className="text-sm font-semibold text-brand">Xem hết</a>} />
           <div className="no-scrollbar -mx-4 flex gap-2.5 overflow-x-auto px-4 lg:mx-0 lg:grid lg:grid-cols-4 lg:px-0">
             {contacts.map((c) => {
-              // có số thì gọi, chưa có số thì nhắn qua TikTok
+              // có số thì gọi, chưa có số thì mở link (TikTok / Facebook / Zalo…)
               const href = c.phone ? `tel:${c.phone}` : c.url
               return (
                 <a key={c.id} href={href} target={c.phone ? undefined : '_blank'} rel="noreferrer"
@@ -191,7 +192,7 @@ export default function Home() {
                   <span className="text-2xl">{c.icon}</span>
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-semibold">{c.name}</div>
-                    <div className="truncate text-xs text-muted">{c.phone ? c.phone.replace(/(\d{4})(\d{3})(\d+)/, '$1.$2.$3') : 'Nhắn qua TikTok'}</div>
+                    <div className="truncate text-xs text-muted">{c.phone ? c.phone.replace(/(\d{4})(\d{3})(\d+)/, '$1.$2.$3') : socialOf(c.url).name === 'link' ? 'Mở link' : `Nhắn qua ${socialOf(c.url).name}`}</div>
                   </div>
                   <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand/15 text-brand">
                     {c.phone ? <Phone size={16} /> : <MessageCircle size={16} />}

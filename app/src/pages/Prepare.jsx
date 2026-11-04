@@ -2,10 +2,8 @@ import { useState } from 'react'
 import { Check, ChevronDown, Phone } from 'lucide-react'
 import { remove, save, swapOrder, useCollection } from '../store'
 import { AddButton, Btn, EditTools, FormSheet, Loading, SectionTitle, Segmented, confirmDelete, useForm } from '../components/ui'
+import { socialOf } from '../components/social'
 
-const TikTok = (p) => (
-  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" {...p}><path d="M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 1 1-2.59-2.59c.27 0 .53.04.77.12V9.77a5.68 5.68 0 0 0-.77-.05A5.68 5.68 0 1 0 15.54 15.4V9.01a7.33 7.33 0 0 0 4.29 1.38V7.3a4.28 4.28 0 0 1-3.23-1.48z" /></svg>
-)
 const fmtPhone = (p) => (p || '').replace(/(\d{4})(\d{3})(\d+)/, '$1.$2.$3')
 
 function Checklist() {
@@ -83,7 +81,7 @@ function Contacts() {
             </div>
             <div className="mt-4 flex gap-2">
               {c.phone && <a href={`tel:${c.phone}`} className="flex-1"><Btn className="w-full"><Phone size={15} /> {fmtPhone(c.phone)}</Btn></a>}
-              {c.url && <a href={c.url} target="_blank" rel="noreferrer" className="flex-1"><Btn variant="ghost" className="w-full"><TikTok /> Nhắn tin</Btn></a>}
+              {c.url && (() => { const { name, Icon } = socialOf(c.url); return <a href={c.url} target="_blank" rel="noreferrer" className="flex-1"><Btn variant="ghost" className="w-full"><Icon /> {name === 'link' ? 'Mở link' : name}</Btn></a> })()}
             </div>
           </div>
         ))}

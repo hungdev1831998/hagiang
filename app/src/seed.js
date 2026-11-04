@@ -178,6 +178,7 @@ export const CHECKLIST = ord([
 
 export const CONTACTS = ord([
   { name: 'Nhà xe Bằng Phấn', role: 'Xe khách Hà Nội ⇄ Hà Giang', phone: '0917898898', url: 'https://www.tiktok.com/@nhaxebangphanhagiang', icon: '🚌' },
+  { name: 'Nhà xe Quang Nghị', role: 'Xe khách Hà Nội ⇄ Hà Giang · VP phố cổ: 6 Hàng Muối · VP Hà Giang: 60 Minh Khai', phone: '0949744733', url: 'https://www.facebook.com/xequangnghi', icon: '🚌' },
   { name: 'Giang Sơn', role: 'Thuê xe máy + hostel, TP Hà Giang', phone: '0983380333', url: 'https://www.tiktok.com/@thuexemayhagianggiangson', icon: '🛵' },
   { name: 'Cici Homestay', role: 'Phố cổ Đồng Văn · đêm 4 & 5/12', phone: '0966898505', url: 'https://www.tiktok.com/@cicihomestay.ng.v', icon: '🏡' },
   { name: "O'Chau Mèo Vạc Homestay", role: 'Mèo Vạc · đêm 6/12', phone: '', url: 'https://www.tiktok.com/@meovacochauhomestay', icon: '🏡' },
