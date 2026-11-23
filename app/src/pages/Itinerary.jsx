@@ -31,20 +31,20 @@ const todayIso = () => new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 
 // Đoạn đường nối 2 điểm: giờ rời điểm trước → km, thời gian → giờ tới điểm sau (như nét đứt trong Figma).
 // Nút "Đi tới" mở dẫn đường Google Maps từ vị trí hiện tại tới điểm sau (xe máy / ô tô); chặng máy bay thì không.
 function Leg({ leg, next }) {
-  const flight = leg?.mode === 'flight'
+  const flight = leg?.mode === 'flight', walk = leg?.mode === 'walk'
   const dest = !flight && locOf(next)
   return (
     <div className="relative h-28 pl-[27px]">
       <div className="dash-v absolute top-0 bottom-0 left-[27px] w-[2px]" />
       {leg?.from && <span className="absolute top-2 right-6 text-xs font-semibold tabular-nums text-muted">rời {leg.from}</span>}
-      {(leg?.km || leg?.dur || flight) && (
+      {(leg?.km || leg?.dur || flight || walk) && (
         <div className="absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1 text-xs">
-          {(leg.km || flight) && <span className="font-bold text-ink">{flight ? '✈️ ' : ''}{leg.km}</span>}
+          {(leg.km || flight || walk) && <span className="font-bold text-ink">{flight ? '✈️ ' : walk ? '🚶 đi bộ ' : ''}{leg.km}</span>}
           {leg.dur && <span className="-rotate-2 rounded-lg bg-ink px-3 py-1 font-bold text-bg shadow">{leg.dur}</span>}
         </div>
       )}
       {dest && (
-        <a href={navUrl(dest)} target="_blank" rel="noreferrer" aria-label={`Dẫn đường tới ${next.title}`}
+        <a href={navUrl(dest, leg?.mode)} target="_blank" rel="noreferrer" aria-label={`Dẫn đường tới ${next.title}`}
           className="absolute top-1/2 right-4 flex -translate-y-1/2 items-center gap-1.5 rounded-full bg-brand/15 px-3 py-2 text-xs font-bold text-brand transition hover:bg-brand/25">
           <Navigation size={13} /> Đi tới
         </a>

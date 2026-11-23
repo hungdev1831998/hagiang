@@ -25,6 +25,7 @@ export const MODES = [
   { value: '', label: '🛵 Xe máy' },
   { value: 'car', label: '🚗 Ô tô / taxi' },
   { value: 'flight', label: '✈️ Máy bay' },
+  { value: 'walk', label: '🚶 Đi bộ' },
 ]
 
 // Mã địa điểm Google (cid) trong link Google Maps đầy đủ: ".../data=...!1s0x36cb…:0xb092111bc7ffa94c..." hoặc "?cid=…"
@@ -59,8 +60,9 @@ export function withPlace({ loc = '', place = '' }, prev = {}) {
   return { loc: v, place: v === (prev.loc || '') ? place || prev.place || '' : '' }
 }
 
-// Dẫn đường từ vị trí hiện tại tới loc (bỏ origin = vị trí của điện thoại)
-export const navUrl = (loc) => `${BASE}/dir/?api=1&destination=${enc(loc)}&travelmode=driving&dir_action=navigate`
+// Dẫn đường từ vị trí hiện tại tới loc (bỏ origin = vị trí của điện thoại); chặng đi bộ thì chỉ đường đi bộ
+export const navUrl = (loc, mode = '') =>
+  `${BASE}/dir/?api=1&destination=${enc(loc)}&travelmode=${mode === 'walk' ? 'walking' : 'driving'}&dir_action=navigate`
 
 // Chỉ đường cả ngày: cắt lịch trình ở chặng máy bay, lấy đoạn đường bộ có nhiều điểm có vị trí nhất.
 // Google cho tối đa 9 điểm trung gian (trình duyệt điện thoại chỉ 3), nên đoạn dài vẫn có nút "Đi tới" từng chặng.
