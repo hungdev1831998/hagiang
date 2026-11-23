@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import { Camera, MapPin, MapPinned, Navigation, Plus, Pencil, Trash2 } from 'lucide-react'
 import { remove, save, useCollection } from '../store'
-import { MODES, dayRouteUrl, locOf, navUrl, placeUrl } from '../maps'
+import { MODES, dayRouteUrl, locOf, navUrl, stopMapUrl, withPlace } from '../maps'
 import { AddButton, Btn, EditTools, FormSheet, Lightbox, Loading, Segmented, asset, confirmDelete, dayLabel, useEdit, useForm } from '../components/ui'
 
 const STOP_FIELDS = [
   { key: 'title', label: 'Tên điểm dừng' },
   { key: 'time', label: 'Giờ tới', placeholder: '09:30' },
   { key: 'desc', label: 'Mô tả', type: 'textarea' },
-  { key: 'loc', label: 'Vị trí trên bản đồ', placeholder: 'Toạ độ 23.2784,105.3485 hoặc link Google Maps đầy đủ' },
+  { key: 'loc', label: 'Vị trí trên bản đồ (dán link Google Maps đầy đủ để mở đúng trang địa điểm)', placeholder: 'Link Google Maps đầy đủ hoặc toạ độ 23.2784,105.3485' },
   { key: 'items', label: 'Hoạt động', type: 'items' },
   { key: 'icon', label: 'Biểu tượng (emoji)', placeholder: '📍' },
   { key: 'img', label: 'Ảnh', type: 'image' },
@@ -65,8 +65,8 @@ function StopCard({ s, onEdit, onDelete, onUp, onDown, onImg }) {
             <div className="mb-1 inline-flex rounded-lg bg-brand/15 px-2 py-0.5 text-xs font-bold text-brand">{s.time}</div>
             <h3 className="text-lg leading-snug font-bold">{s.title}</h3>
             {s.desc && <p className="mt-1 text-[13px] leading-relaxed text-muted">{s.desc}</p>}
-            {locOf(s) && (
-              <a href={placeUrl(locOf(s))} target="_blank" rel="noreferrer" className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-brand underline-offset-2 hover:underline">
+            {stopMapUrl(s) && (
+              <a href={stopMapUrl(s)} target="_blank" rel="noreferrer" className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-brand underline-offset-2 hover:underline">
                 <MapPin size={12} /> Bản đồ
               </a>
             )}
@@ -122,11 +122,12 @@ export default function Itinerary() {
   const setStops = (next) => save('days', day.id, { stops: next })
   const submitStop = (v) => {
     const { legKm, legDur, legFrom, legTo, legMode, ...rest } = v
+    const i = stopForm.meta?.index
     const s = {
       icon: '📍', desc: '', img: '', items: [], loc: '', ...rest,
+      ...withPlace(rest, i == null ? {} : stops[i]),
       leg: legKm || legDur || legFrom || legTo || legMode ? { km: legKm || '', dur: legDur || '', from: legFrom || '', to: legTo || '', mode: legMode || '' } : null,
     }
-    const i = stopForm.meta?.index
     if (i == null) setStops([...stops, { ...s, id: `s${Date.now()}` }])
     else setStops(stops.map((x, j) => (j === i ? { ...x, ...s } : x)))
   }

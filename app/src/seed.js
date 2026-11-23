@@ -1,124 +1,147 @@
 // Dữ liệu ban đầu: ghi vào Firestore ở lần đăng nhập đầu tiên, sau đó cả nhóm tự sửa trên web.
-// Lịch trình chép theo file Figma "Hà Giang" (giờ giấc giữ nguyên). Chỉ đổi những chỗ bị chuyến bay thật
-// ràng buộc: Day 1 (VJ128 17:20 → 19:30), tối Day 5 và Day 6 (VJ157 12:55).
+// Day 1 và Day 6 chép theo file Figma "Hà Giang", chỉnh theo chuyến bay thật (VJ128 17:20 → 19:30, VJ157 13:20, bị delay từ 12:55).
+// Day 2–5 (4–7/12) theo bảng "Lịch trình 2: Đồng Văn → Lô Lô Chải → Mèo Vạc" (11/2026). Ảnh Figma các ngày này vẫn là bản cũ.
 
 const img = (name) => `/img/stops/${name}.png`
 const FIGMA_DAY = (n) => `/figma/Day ${n}.png`
 
 let n = 0
 const id = () => `s${++n}`
-// Vị trí trên bản đồ của từng điểm dừng (theo tên), tra trên Google Maps 10/2026. Điểm chỉ là hoạt động
-// (trả phòng, ăn sáng…) dùng vị trí nơi ở. Điểm đón xe gần Nội Bài chưa chốt nên để trống.
-const CICI = '23.278421,105.348532', OCHAU = '23.206792,105.416675', GIANG_SON = '22.801008,104.980493'
+// Vị trí trên bản đồ của từng điểm dừng (theo tên), tra trên Google Maps 10/2026; điểm mới của Day 2–5 tra trên
+// OpenStreetMap 11/2026. Điểm chỉ là hoạt động (trả phòng, ăn sáng…) dùng vị trí nơi ở. Xe khách đón
+// ngay ở sân bay Nội Bài (cùng chỗ với điểm trước) nên để trống. Quân đội hotel và LoLo Ancient House theo link Google Maps nhóm gửi 11/2026.
+const OCHAU = '23.206792,105.416675', GIANG_SON = '22.801008,104.980493', QUAN_DOI = '23.279499,105.363355', LOLO = '23.362802,105.309893'
 export const STOP_LOCS = {
   'Tân Sơn Nhất': '10.813939,106.662709', 'Sân bay Tân Sơn Nhất': '10.813939,106.662709', 'Sân bay Nội Bài': '21.214525,105.802514',
-  'Giang Sơn': GIANG_SON, 'Dốc Bắc Sum': '22.992112,104.930303', 'Cổng trời Quản Bạ': '23.049282,104.992677',
-  'Phở Tráng Kìm': '23.065561,104.994216', 'Dốc Thẩm Mã': '23.169387,105.194686', 'Nhà Pao': '23.225789,105.203760',
-  'Cici Homestay - Đồng Văn': CICI, 'Về Cici Homestay': CICI, 'Trả phòng': CICI,
-  'Chợ phiên, phố cổ': '23.277074,105.361235', 'Dinh Vua Mèo': '23.256285,105.262126', 'Điểm cực Bắc, Lũng Cú': '23.363406,105.316300',
-  'Cafe A Páo': '23.243095,105.397883', 'Mỏm Đá Tử Thần': '23.242899,105.397308', 'Đèo Mã Pì Lèng': '23.227269,105.418095',
-  'Sông Nho Quế': '23.230298,105.430690', "O'Chau Meo Vac Homestay": OCHAU, 'Ăn sáng, chụp ảnh': OCHAU,
+  'Giang Sơn': GIANG_SON, 'Cột mốc Km0': '22.827330,104.984169', 'Dốc Bắc Sum': '22.992112,104.930303', 'Cổng trời Quản Bạ': '23.049282,104.992677',
+  'Phố Tráng Kìm': '23.065561,104.994216', 'Ăn trưa Yên Minh': '23.119454,105.140661', 'Dốc Thẩm Mã': '23.169387,105.194686',
+  'Làng Sủng Là – Nhà của Pao': '23.225789,105.203760', 'Dinh Vua Mèo': '23.256285,105.262126', 'Quân đội hotel - Đồng Văn': QUAN_DOI,
+  'Ăn sáng, rời Đồng Văn': QUAN_DOI, 'Điểm cực Bắc, Lũng Cú': '23.363406,105.316300', 'Loloancient Homestay': LOLO,
+  'Đón bình minh, rời bản': LOLO, 'Chợ phiên Đồng Văn': '23.277074,105.361235', 'Đèo Mã Pì Lèng': '23.243095,105.397883',
+  'Sông Nho Quế': '23.230298,105.430690', "O'Chau Meo Vac Homestay": OCHAU, 'Ăn sáng, xuất phát': OCHAU,
   'Cua chữ M': '23.105822,105.259950', 'Mậu Duệ': '23.068512,105.237034', 'Ngã Ba Hữu Vinh': '23.122910,105.164787',
+  'Làng dệt lanh Lùng Tám': '23.048691,105.043024',
   'Lên xe về Hà Nội': '22.822498,104.987934', 'Ăn sáng, cafe Hà Nội': '21.033585,105.855242',
+}
+// Mã địa điểm Google Maps (cid) để nút "Bản đồ" mở đúng trang địa điểm có tên, ảnh, đánh giá thay vì chỉ hiện toạ độ.
+// Dò trên Google Maps 11/2026, đều trùng toạ độ ở trên (lệch dưới 130m). Dốc Bắc Sum, Phố Tráng Kìm, chỗ ăn sáng Hà Nội
+// chưa có trang đúng tên nên mở bằng toạ độ.
+const P_OCHAU = '7588676097143750760', P_QUAN_DOI = '14157721492145757144', P_LOLO = '1099482751974199173'
+export const STOP_PLACES = {
+  'Tân Sơn Nhất': '14479865043165150186', 'Sân bay Tân Sơn Nhất': '14479865043165150186', 'Sân bay Nội Bài': '14832940231668167514',
+  'Giang Sơn': '3548203913388739483', 'Cột mốc Km0': '16449364008016380342', 'Cổng trời Quản Bạ': '7482842577190627613',
+  'Ăn trưa Yên Minh': '15255423455836004760', 'Dốc Thẩm Mã': '12723250708292282700', 'Làng Sủng Là – Nhà của Pao': '8344957613155452311',
+  'Dinh Vua Mèo': '16628787314829177824', 'Quân đội hotel - Đồng Văn': P_QUAN_DOI, 'Ăn sáng, rời Đồng Văn': P_QUAN_DOI,
+  'Điểm cực Bắc, Lũng Cú': '3471234121561903391', 'Loloancient Homestay': P_LOLO, 'Đón bình minh, rời bản': P_LOLO,
+  'Chợ phiên Đồng Văn': '8324676100800738763', 'Đèo Mã Pì Lèng': '6859122739488652373', 'Sông Nho Quế': '12083313698382780156',
+  "O'Chau Meo Vac Homestay": P_OCHAU, 'Ăn sáng, xuất phát': P_OCHAU, 'Cua chữ M': '5492857547899998434',
+  'Mậu Duệ': '3899514343112068669', 'Ngã Ba Hữu Vinh': '16771022136973573071', 'Làng dệt lanh Lùng Tám': '17655723657891581687',
+  'Lên xe về Hà Nội': '3760678587039714122',
 }
 // leg = đoạn đường từ điểm này tới điểm sau: km, thời gian, giờ đi, giờ tới (giống đường nét đứt trong Figma)
 // mode: '' = xe máy, 'car' = ô tô / taxi, 'flight' = máy bay (chỉ đường bỏ qua chặng này)
-const stop = ({ items = [], ...s }) => ({ id: id(), desc: '', img: '', icon: '📍', leg: null, loc: STOP_LOCS[s.title] || '', ...s, items: items.map((it) => ({ id: id(), ...it })) })
+const stop = ({ items = [], ...s }) => ({ id: id(), desc: '', img: '', icon: '📍', leg: null, loc: STOP_LOCS[s.title] || '', place: STOP_PLACES[s.title] || '', ...s, items: items.map((it) => ({ id: id(), ...it })) })
 const leg = (km, dur, from, to, mode = '') => ({ km, dur, from, to, mode })
 
 export const DAYS = [
   {
-    id: 'day1', order: 1, date: '2026-12-03', title: 'Sài Gòn → Hà Nội', weather: '🌤️', temp: '26°C - 16°C', figmaImg: FIGMA_DAY(1),
+    id: 'day1', order: 1, date: '2026-12-03', title: 'Sài Gòn → Hà Nội', weather: '🌤️', temp: '31°C - 16°C', figmaImg: FIGMA_DAY(1),
     stops: [
       stop({ time: '15:15', icon: '🛫', img: img('tan-son-nhat'), title: 'Tân Sơn Nhất', desc: 'Kiểm tra hành lí, căn cước chuẩn bị bay đến Nội Bài',
         items: [{ label: 'Tập trung, kiểm tra lần nữa', time: '15:15' }, { label: 'VIETJET AIR', time: 'VJ128 | T1' }, { label: 'Cất cánh', time: '17:20' }],
         leg: leg('1.160km', '2h 10p', '17:20', '19:30', 'flight') }),
-      stop({ time: '19:30', icon: '🛬', img: img('noi-bai'), title: 'Sân bay Nội Bài', desc: 'Xuống máy bay, vệ sinh cá nhân, nghỉ ngơi nhanh, chuẩn bị lên xe đi Hà Giang',
-        items: [{ label: 'Hạ cánh', time: '19:30' }, { label: 'Lấy hành lí', time: '19:40 - 20:25' }, { label: 'Vệ sinh cá nhân', time: '20:25 - 20:55' }],
-        leg: leg('', '15p', '20:55', '21:10', 'car') }),
-      stop({ time: '21:10', icon: '🚌', img: img('xe-giuong-nam'), title: 'Lên xe đến Hà Giang', desc: 'Kiểm tra hành lí đầy đủ trước khi lên xe, cố gắng ngủ để mai đi sớm',
-        items: [{ label: 'Xe Bằng Phấn', time: '0917.898.898' }, { label: 'Lên xe', time: '21:10' }] }),
+      stop({ time: '19:30', icon: '🛬', img: img('noi-bai'), title: 'Sân bay Nội Bài', desc: 'Xuống máy bay, lấy hành lí, vệ sinh cá nhân, chờ xe Bằng Phấn đón ngay ở sân bay',
+        items: [{ label: 'Hạ cánh', time: '19:30' }, { label: 'Lấy hành lí', time: '19:40 - 20:25' }, { label: 'Vệ sinh cá nhân, ăn nhẹ', time: '20:25 - 21:00' }] }),
+      stop({ time: '21:30', icon: '🚌', img: img('xe-giuong-nam'), title: 'Lên xe đến Hà Giang', desc: 'Xe cabin cung điện 24 phòng, chạy từ Mỹ Đình 21:00 rồi đón nhóm ở sân bay Nội Bài, tới Hà Giang khoảng 03:30. Giờ đón chính xác hỏi nhà xe. Cố gắng ngủ để mai đi sớm.',
+        items: [{ label: 'Xe Bằng Phấn', time: '0917.898.898' }, { label: 'Giường', time: 'A3, A5, B3, B5' }, { label: 'Xe đón ở sân bay Nội Bài', time: '~21:30, nhà xe báo giờ' }] }),
     ],
   },
   {
-    id: 'day2', order: 2, date: '2026-12-04', title: 'Hà Giang → Đồng Văn', weather: '🌤️', temp: '25°C - 16°C', figmaImg: FIGMA_DAY(2),
+    id: 'day2', order: 2, date: '2026-12-04', title: 'Hà Giang → Đồng Văn', weather: '🌤️', temp: '21°C - 10°C', figmaImg: FIGMA_DAY(2),
     stops: [
-      stop({ time: '04:30', icon: '🛵', img: img('giang-son'), title: 'Giang Sơn', desc: 'Chỗ cho thuê xe máy + hostel. Nghỉ ngơi, chuẩn bị cho hành trình.',
-        items: [{ label: 'Checkin nghỉ ngơi', time: '04:30 - 07:00' }, { label: 'Vệ sinh, ăn sáng', time: '07:00 - 08:00' }, { label: 'Lấy xe, xuất phát', time: '08:30' }],
-        leg: leg('35km', '1h', '08:30', '09:30') }),
-      stop({ time: '09:30', icon: '📸', img: img('doc-bac-sum'), title: 'Dốc Bắc Sum', desc: 'Đây là con dốc dài nhất tỉnh Hà Giang với chiều dài 7km và độ cao hơn 450m.',
-        items: [{ label: 'Check in, chụp ảnh', time: '09:30 - 10:00' }], leg: leg('14km', '30p', '10:00', '10:30') }),
-      stop({ time: '10:30', icon: '☕', img: img('quan-ba'), title: 'Cổng trời Quản Bạ', desc: 'Chủ yếu để nghỉ ngơi, cảnh ở đây tạm ổn',
-        items: [{ label: 'Check in, cafe', time: '10:30 - 11:00' }], leg: leg('13km', '30p', '11:00', '11:30') }),
-      stop({ time: '11:30', icon: '🍜', img: img('pho-trang-kim'), title: 'Phở Tráng Kìm', desc: 'Ăn trưa, nghỉ ngơi',
-        items: [{ label: 'Ăn trưa', time: '11:30 - 12:30' }], leg: leg('52km', '1h30p', '12:30', '14:00') }),
-      stop({ time: '14:00', icon: '📸', img: img('tham-ma'), title: 'Dốc Thẩm Mã', desc: 'Dốc Thẩm Mã là một con đường đèo ngoằn ngoèo nguy hiểm nhất ở miền Bắc nối giữa thành phố Hà Giang và huyện Mèo Vạc.',
-        items: [{ label: 'Check in, chụp ảnh', time: '14:00 - 14:30' }], leg: leg('62km', '2h', '14:30', '16:30') }),
-      stop({ time: '16:30', icon: '🏚️', img: img('nha-pao'), title: 'Nhà Pao', desc: 'Ngôi nhà 75 năm tuổi mang kiến trúc đặc trưng của người Mông, bối cảnh phim "Chuyện của Pao"',
-        items: [{ label: 'Check in, chụp ảnh', time: '16:30 - 17:15' }], leg: leg('23km', '45p', '17:15', '18:00') }),
-      stop({ time: '18:00', icon: '🏡', img: img('cici-2'), title: 'Cici Homestay - Đồng Văn', desc: 'Homestay đầu tiên của chúng ta ở Đồng Văn, sẽ ở đây 2 đêm',
-        items: [{ label: 'Check in, nhận phòng', time: '0966 898 505' }, { label: 'Tắm rửa', time: '18:30 - 19:30' }, { label: 'Ăn tối', time: '19:30' }] }),
+      stop({ time: '03:30', icon: '🛵', img: img('giang-son'), title: 'Giang Sơn', desc: 'Xe đêm tới Hà Giang khoảng 03:30. Nghỉ ở phòng dorm của Giang Sơn tới sáng, ăn sáng, nhận xe máy thuê rồi tự lái.',
+        items: [{ label: 'Xuống xe Bằng Phấn', time: '~03:30' }, { label: 'Nghỉ ở phòng dorm Giang Sơn', time: 'tới sáng' }, { label: 'Ăn sáng' }, { label: 'Nhận xe máy' }], leg: leg('3km', '', '', '07:00') }),
+      stop({ time: '07:00', icon: '🏁', title: 'Cột mốc Km0', desc: 'Xuất phát, chụp ảnh ở cột mốc Km0 Hà Giang',
+        items: [{ label: 'Chụp ảnh, xuất phát', time: '07:00' }], leg: leg('31km', '', '', '08:30') }),
+      stop({ time: '08:30', icon: '📸', img: img('doc-bac-sum'), title: 'Dốc Bắc Sum', desc: 'Đây là con dốc dài nhất tỉnh Hà Giang với chiều dài 7km và độ cao hơn 450m.',
+        items: [{ label: 'Check in, chụp ảnh', time: '08:30' }], leg: leg('14km', '', '', '09:30') }),
+      stop({ time: '09:30', icon: '⛰️', img: img('quan-ba'), title: 'Cổng trời Quản Bạ', desc: 'Check in Cổng Trời, ngắm Núi đôi Cô Tiên',
+        items: [{ label: 'Cổng Trời, Núi đôi Cô Tiên', time: '09:30' }], leg: leg('13km', '', '', '10:30') }),
+      stop({ time: '10:30', icon: '📸', title: 'Phố Tráng Kìm', desc: 'Dừng chụp ảnh 20–30 phút',
+        items: [{ label: 'Dừng chụp ảnh', time: '10:30 - 11:00' }], leg: leg('39km', '45p', '11:00', '11:45') }),
+      stop({ time: '11:45', icon: '🍚', title: 'Ăn trưa Yên Minh', desc: 'Ăn trưa ở Yên Minh, trên đường đi qua rừng thông Yên Minh',
+        items: [{ label: 'Ăn trưa', time: '11:45' }], leg: leg('12km', '', '', '13:15') }),
+      stop({ time: '13:15', icon: '📸', img: img('tham-ma'), title: 'Dốc Thẩm Mã', desc: 'Dốc Thẩm Mã là một con đường đèo ngoằn ngoèo nguy hiểm nhất ở miền Bắc nối giữa thành phố Hà Giang và huyện Mèo Vạc.',
+        items: [{ label: 'Check in, chụp ảnh', time: '13:15' }], leg: leg('10km', '', '', '14:15') }),
+      stop({ time: '14:15', icon: '🏚️', img: img('nha-pao'), title: 'Làng Sủng Là – Nhà của Pao', desc: 'Ngôi nhà 75 năm tuổi mang kiến trúc đặc trưng của người Mông, bối cảnh phim "Chuyện của Pao". Dừng khoảng 20 phút.',
+        items: [{ label: 'Check in, chụp ảnh', time: '14:15 - 14:35' }], leg: leg('12km', '40p', '14:35', '15:15') }),
+      stop({ time: '15:15', icon: '🏯', img: img('dinh-vua-meo'), title: 'Dinh Vua Mèo', desc: 'Khu dinh thự của vua Mèo, tên dùng trong các văn bản là Dinh thự họ Vương',
+        items: [{ label: 'Tham quan', time: '15:15' }], leg: leg('14km', '', '', '16:30') }),
+      stop({ time: '16:30', icon: '🏨', title: 'Quân đội hotel - Đồng Văn', desc: 'Về phố cổ Đồng Văn, nhận phòng. Tối dạo phố cổ lên đèn, café Cao Nguyên Đá.',
+        items: [{ label: 'Nhận phòng', time: '16:30' }, { label: 'Dạo phố cổ lên đèn', time: 'Tối' }, { label: 'Café Cao Nguyên Đá', time: 'Tối' }] }),
     ],
   },
   {
-    id: 'day3', order: 3, date: '2026-12-05', title: 'Đồng Văn – Lũng Cú', weather: '🌤️', temp: '25°C - 16°C', figmaImg: FIGMA_DAY(3),
+    id: 'day3', order: 3, date: '2026-12-05', title: 'Đồng Văn → Lô Lô Chải', weather: '🌤️', temp: '16°C - 8°C', figmaImg: FIGMA_DAY(3),
     stops: [
-      stop({ time: '06:00', icon: '🧺', img: img('cho-phien'), title: 'Chợ phiên, phố cổ', desc: 'Chợ phiên ở phố cổ Đồng Văn, đi để trải nghiệm',
-        items: [{ label: 'Tập trung, đi bộ đến chợ', time: '06:00 - 06:30' }, { label: 'Ăn sáng, trải nghiệm', time: '06:30 - 09:30' }, { label: 'Quay lại homestay lấy xe', time: '09:30 - 10:00' }],
-        leg: leg('13km', '30p', '10:00', '10:30') }),
-      stop({ time: '10:30', icon: '🏯', img: img('dinh-vua-meo'), title: 'Dinh Vua Mèo', desc: 'Khu dinh thự của vua Mèo, tên dùng trong các văn bản là Dinh thự họ Vương',
-        items: [{ label: 'Check in, tham quan', time: '10:30 - 12:30' }, { label: 'Ăn trưa', time: '12:30 - 13:30' }], leg: leg('29km', '1h', '13:30', '14:30') }),
-      stop({ time: '14:30', icon: '🚩', img: img('lung-cu'), title: 'Điểm cực Bắc, Lũng Cú', desc: 'Cột cờ Lũng Cú là một cột cờ quốc gia nằm ở đỉnh Lũng Cú hay còn gọi là đỉnh núi Rồng (Long Sơn) có độ cao khoảng 1.470 m',
-        items: [{ label: 'Check in, chụp ảnh', time: '14:30 - 15:30' }, { label: 'Làng Lô Lô Chải', time: '15:30 - 16:30' }], leg: leg('24km', '1h', '16:30', '17:30') }),
-      stop({ time: '17:30', icon: '🏡', img: img('cici'), title: 'Về Cici Homestay', desc: 'Homestay cũ, tắm rửa ăn tối ở phố cổ (lẩu gà đen, bánh đa, rượu ngô)',
-        items: [{ label: 'Tắm rửa', time: '17:00 - 18:00' }, { label: 'Ra phố cổ ăn tối', time: '18:00 - 21:00' }, { label: 'Team building', time: 'Chơi bài, solo hiphop' }] }),
+      stop({ time: '08:00', icon: '🍳', title: 'Ăn sáng, rời Đồng Văn', desc: 'Ngày sống chậm (~25km). Ăn sáng thong thả, trả phòng rồi rời Đồng Văn.',
+        items: [{ label: 'Ăn sáng thong thả', time: '08:00' }, { label: 'Trả phòng, rời Đồng Văn' }], leg: leg('26km', '', '', '09:00') }),
+      stop({ time: '09:00', icon: '🚩', img: img('lung-cu'), title: 'Điểm cực Bắc, Lũng Cú', desc: 'Leo cột cờ Lũng Cú (điểm cực Bắc), chụp ảnh, ngắm toàn cảnh bản Lô Lô Chải từ trên cao',
+        items: [{ label: 'Leo cột cờ, chụp ảnh', time: '09:00 - 11:00' }], leg: leg('2km', '30p', '11:00', '11:30') }),
+      stop({ time: '11:30', icon: '🏡', title: 'Loloancient Homestay', desc: 'Nhận phòng homestay ở bản Lô Lô Chải, ăn cơm nhà dân',
+        items: [{ label: 'Nhận phòng', time: '11:30' }, { label: 'Ăn cơm nhà dân' }] }),
+      stop({ time: '14:00', icon: '🧶', title: 'Dạo bản Lô Lô Chải', desc: 'Đi bộ quanh bản: học thêu/dệt thổ cẩm, xem nhà trình tường, trò chuyện với người Lô Lô',
+        items: [{ label: 'Đi bộ quanh bản', time: '14:00 - 16:30' }, { label: 'Ngắm HOÀNG HÔN', time: '~17:00' }, { label: 'Ngồi bếp lửa cùng gia đình chủ nhà', time: 'Tối' }] }),
     ],
   },
   {
-    id: 'day4', order: 4, date: '2026-12-06', title: 'Đồng Văn → Mèo Vạc', weather: '🌤️', temp: '28°C - 15°C', figmaImg: FIGMA_DAY(4),
+    id: 'day4', order: 4, date: '2026-12-06', title: 'Lô Lô Chải → Mèo Vạc', weather: '🌤️', temp: '17°C - 8°C', figmaImg: FIGMA_DAY(4),
     stops: [
-      stop({ time: '07:30', icon: '🎒', img: img('tra-phong'), title: 'Trả phòng', desc: 'Thu dọn hành lí, trả phòng, đi Mèo Vạc',
-        items: [{ label: 'Tập trung', time: '07:30' }, { label: 'Checkout', time: '08:00' }], leg: leg('12km', '30p', '08:00', '08:30') }),
-      stop({ time: '08:30', icon: '☕', img: img('cafe-a-pao'), title: 'Cafe A Páo', desc: 'Ma Pi Leng Skywalk, quán cafe của 1 a Páo mất nết. Đây là đỉnh đèo Mã Pì Lèng, gửi xe ở đây để đi lên mỏm đá tử thần',
-        items: [{ label: 'Ăn sáng, cafe', time: '08:30 - 09:30' }], leg: leg('', '30p', '09:30', '10:00') }),
-      stop({ time: '10:00', icon: '⛰️', img: img('mom-da-tu-than'), title: 'Mỏm Đá Tử Thần', desc: 'View hùng vĩ khá đẹp nhưng nguy hiểm, lên cho biết, không nên leo lên đá check in, ai không đi ở lại Páo',
-        items: [{ label: 'Check in, chụp ảnh', time: '10:00 - 10:30' }, { label: 'Quay về A Páo', time: '10:30 - 11:00' }], leg: leg('12km', '30p', '11:00', '11:30') }),
-      stop({ time: '11:30', icon: '🛣️', img: img('ma-pi-leng'), title: 'Đèo Mã Pì Lèng', desc: '‘Tứ đại đỉnh đèo’ của vùng núi đất Bắc, đẹp! Trải nghiệm trên cung đường đi',
-        items: [{ label: 'Chụp ảnh, flycam', time: '11:30 - 12:00' }], leg: leg('8km', '30p', '12:00', '12:30') }),
-      stop({ time: '12:30', icon: '🚤', img: img('nho-que'), title: 'Sông Nho Quế', desc: 'Sông với màu xanh của rêu, rất đẹp! Trải nghiệm đi thuyền ngắm view, ăn trưa ở đây',
-        items: [{ label: 'Thủy điện NQ1', time: '12:30' }, { label: 'Mua vé + đi thuyền', time: '12:30 - 13:30' }, { label: 'Ăn cơm Anh Quân Camp', time: '13:30 - 15:45' }], leg: leg('8.8km', '30p', '15:45', '16:15') }),
-      stop({ time: '16:15', icon: '🏡', img: img('ochau'), title: "O'Chau Meo Vac Homestay", desc: "Homestay cuối cùng, nằm trong làng H'Mong, cố gắng về sớm để thăm quan",
-        items: [{ label: 'Checkin nhận phòng', time: '16:30' }, { label: 'Tham quan tự do', time: '16:30 - 19:30' }, { label: 'Tập trung ăn cơm', time: '19:30' }] }),
+      stop({ time: '06:00', icon: '🌄', img: img('tra-phong'), title: 'Đón bình minh, rời bản', desc: 'Đón bình minh ở Lô Lô Chải, ăn sáng nhanh, trả phòng',
+        items: [{ label: 'Đón BÌNH MINH, ăn sáng nhanh', time: '06:00' }, { label: 'Trả phòng, rời bản', time: '07:00' }], leg: leg('26km', '45p', '07:00', '07:45') }),
+      stop({ time: '07:45', icon: '🧺', img: img('cho-phien'), title: 'Chợ phiên Đồng Văn', desc: 'Chợ phiên Chủ nhật ở phố cổ Đồng Văn, đông đến khoảng 10h',
+        items: [{ label: 'Đi chợ phiên', time: '07:45 - 09:45' }], leg: leg('10km', '30p', '09:45', '10:15') }),
+      stop({ time: '10:15', icon: '⛰️', img: img('mom-da-tu-than'), title: 'Đèo Mã Pì Lèng', desc: 'Mỏm đá Tử Thần và Skywalk trên đỉnh đèo. View đẹp nhưng nguy hiểm, không leo lên mỏm đá để check in.',
+        items: [{ label: 'Mỏm đá Tử Thần, Skywalk', time: '10:15 - 11:15' }], leg: leg('13km', '15p', '11:15', '11:30') }),
+      stop({ time: '11:30', icon: '🚤', img: img('nho-que'), title: 'Sông Nho Quế', desc: 'Đi thuyền sông Nho Quế, ngắm hẻm Tu Sản, ăn trưa',
+        items: [{ label: 'Đi thuyền, hẻm Tu Sản', time: '11:30' }, { label: 'Ăn trưa', time: '13:30' }], leg: leg('4km', '', '', '15:00') }),
+      stop({ time: '15:00', icon: '🏡', img: img('ochau'), title: "O'Chau Meo Vac Homestay", desc: "Nhận phòng, nghỉ ngơi. Homestay nằm trong làng H'Mông.",
+        items: [{ label: 'Nhận phòng, nghỉ ngơi', time: '15:00' }, { label: 'Dạo thị trấn Mèo Vạc', time: 'Tối' }, { label: 'Ngủ sớm' }] }),
     ],
   },
   {
-    id: 'day5', order: 5, date: '2026-12-07', title: 'Mèo Vạc → Hà Giang', weather: '🌤️', temp: '27°C - 12°C', figmaImg: FIGMA_DAY(5),
+    id: 'day5', order: 5, date: '2026-12-07', title: 'Mèo Vạc → Hà Giang', weather: '🌤️', temp: '22°C - 11°C', figmaImg: FIGMA_DAY(5),
     stops: [
-      stop({ time: '07:00', icon: '🍳', img: img('an-sang-homestay'), title: 'Ăn sáng, chụp ảnh', desc: 'Dậy sớm, ăn sáng chụp ảnh ở homestay, làng Mông đẹp nên dậy sớm nhá',
-        items: [{ label: 'Ăn sáng tại homestay', time: '07:00 - 09:00 (giờ tự do)' }, { label: 'Checkout', time: '09:30' }], leg: leg('30km', '1h 30p', '09:30', '11:00') }),
-      stop({ time: '11:00', icon: '📸', img: img('cua-chu-m'), title: 'Cua chữ M', desc: 'Đi mấy cái đèo kia rồi nên cua này cũng bình thường! Ngắm trên đường đi',
-        items: [{ label: 'Chụp ảnh, video', time: '11:00' }], leg: leg('11km', '30p', '11:00', '11:30') }),
-      stop({ time: '11:30', icon: '⛽', img: img('mau-due'), title: 'Mậu Duệ', desc: 'Rừng núi hoang sơ, có thể dừng chân nghỉ ngơi. Có thác, suối nhưng vì lạnh nên bỏ qua',
-        items: [{ label: 'Nghỉ ngơi, đổ xăng', time: '11:30 - 12:00' }], leg: leg('12km', '30p', '12:00', '12:30') }),
-      stop({ time: '12:30', icon: '🍚', img: img('huu-vinh'), title: 'Ngã Ba Hữu Vinh', desc: 'Ngã 3 đoạn về Yên Minh, đi lại đường cũ về, ăn trưa tại đây',
-        items: [{ label: 'Ăn trưa, nghỉ ngơi', time: '12:30 - 13:30' }], leg: leg('110km', '4h', '13:30', '17:30') }),
-      stop({ time: '17:30', icon: '🛵', img: img('giang-son'), title: 'Giang Sơn', desc: 'Trả xe, thanh toán, tắm rửa. Mua quà thì mua tối nay. Không ngủ lại: đi xe đêm về Hà Nội để kịp chuyến bay 12:55 ngày mai.',
-        items: [{ label: 'Lấy phòng, tắm rửa', time: '17:30 - 18:30' }, { label: 'Phở chua 93 Nguyễn Trãi', time: '18:30 - 19:30' }, { label: 'Dạo phố, mua quà', time: '19:30 - 21:30' }],
-        leg: leg('', '15p', '21:45', '22:00', 'car') }),
-      stop({ time: '22:00', icon: '🚌', img: img('xe-giuong-nam'), title: 'Lên xe về Hà Nội', desc: 'Kiểm tra hành lí, giấy tờ đầy đủ trước khi lên xe, ngủ trên xe',
-        items: [{ label: 'Xe Bằng Phấn', time: '0917.898.898' }, { label: 'Lên xe', time: '22:00' }] }),
+      stop({ time: '07:30', icon: '🍳', img: img('an-sang-homestay'), title: 'Ăn sáng, xuất phát', desc: 'Ăn sáng thong thả, trả phòng, xuất phát về TP Hà Giang (~170km)',
+        items: [{ label: 'Ăn sáng thong thả', time: '07:30' }, { label: 'Trả phòng, xuất phát' }], leg: leg('31km', '', '', '08:30') }),
+      stop({ time: '08:30', icon: '📸', img: img('cua-chu-m'), title: 'Cua chữ M', desc: 'Đi mấy cái đèo kia rồi nên cua này cũng bình thường! Ngắm trên đường đi',
+        items: [{ label: 'Chụp ảnh, video', time: '08:30' }], leg: leg('10km', '', '', '10:30') }),
+      stop({ time: '10:30', icon: '⛽', img: img('mau-due'), title: 'Mậu Duệ', desc: 'Rừng núi hoang sơ, có thể dừng chân nghỉ ngơi. Có thác, suối nhưng vì lạnh nên bỏ qua',
+        items: [{ label: 'Nghỉ ngơi, đổ xăng', time: '10:30' }], leg: leg('12km', '', '', '11:30') }),
+      stop({ time: '11:30', icon: '📸', img: img('huu-vinh'), title: 'Ngã Ba Hữu Vinh', desc: 'Ngã 3 đoạn về Yên Minh, dừng chụp ảnh khoảng 20 phút',
+        items: [{ label: 'Dừng chụp ảnh', time: '11:30 - 11:50' }], leg: leg('3km', '25p', '11:50', '12:15') }),
+      stop({ time: '12:15', icon: '🍚', title: 'Ăn trưa Yên Minh', desc: 'Ăn trưa ở Yên Minh rồi về theo QL4C, dừng chụp ảnh tuỳ thích',
+        items: [{ label: 'Ăn trưa', time: '12:15 - 13:30' }], leg: leg('42km', '1h 15p', '13:30', '14:45') }),
+      stop({ time: '14:45', icon: '🧵', title: 'Làng dệt lanh Lùng Tám', desc: "(Tuỳ chọn) Làng dệt lanh Lùng Tám, Quản Bạ: xem dệt vải lanh, vẽ sáp ong của người H'Mông",
+        items: [{ label: 'Tham quan (tuỳ chọn)', time: '14:45 - 15:30' }], leg: leg('26km', '1h 15p', '15:30', '16:45') }),
+      stop({ time: '16:45', icon: '📸', img: img('doc-bac-sum'), title: 'Dốc Bắc Sum', desc: 'Qua dốc Bắc Sum trước khi trời tối',
+        items: [{ label: 'Qua dốc', time: '~16:45' }], leg: leg('35km', '', '', '17:30') }),
+      stop({ time: '17:30', icon: '🛵', img: img('giang-son'), title: 'Giang Sơn', desc: 'Về tới TP Hà Giang (muộn nhất 17:30). Trả xe, tắm rửa, ăn tối. Không ngủ lại: đi xe đêm về Hà Nội để kịp chuyến bay 13:20 ngày mai.',
+        items: [{ label: 'Trả xe, tắm rửa', time: '17:30' }, { label: 'Ăn tối', time: '19:00' }], leg: leg('4km', '15p', '21:15', '21:30', 'car') }),
+      stop({ time: '21:30', icon: '🚌', img: img('xe-giuong-nam'), title: 'Lên xe về Hà Nội', desc: 'Văn phòng Bằng Phấn: số 100 Trần Phú, P. Hà Giang 2. Có mặt trước 30 phút, xe chạy 22:00, tới Mỹ Đình khoảng 04:00. Kiểm tra hành lí, giấy tờ trước khi lên xe.',
+        items: [{ label: 'Xe Bằng Phấn', time: '0917.898.898' }, { label: 'Giường', time: 'A8, A10, B8, B10' }, { label: 'Xe chạy', time: '22:00' }] }),
     ],
   },
   {
-    id: 'day6', order: 6, date: '2026-12-08', title: 'Hà Nội → Sài Gòn', weather: '🌤️', temp: '24°C - 12°C', figmaImg: FIGMA_DAY(6),
+    id: 'day6', order: 6, date: '2026-12-08', title: 'Hà Nội → Sài Gòn', weather: '🌤️', temp: '31°C - 16°C', figmaImg: FIGMA_DAY(6),
     stops: [
-      stop({ time: '04:00', icon: '☕', img: img('cafe-sang'), title: 'Ăn sáng, cafe Hà Nội', desc: 'Xe trả khách ở Hà Nội. Vệ sinh, ăn sáng cafe, chuẩn bị ra Nội Bài',
-        items: [{ label: 'Xuống xe, vệ sinh, nghỉ ngơi', time: '04:00 - 06:30' }, { label: 'Ăn sáng, cafe', time: '06:30 - 09:30' }, { label: 'Đi Nội Bài', time: '10:00' }],
+      stop({ time: '04:00', icon: '☕', img: img('cafe-sang'), title: 'Ăn sáng, cafe Hà Nội', desc: 'Xe trả khách ở Mỹ Đình khoảng 04:00. Vệ sinh, ăn sáng cafe, chuẩn bị ra Nội Bài',
+        items: [{ label: 'Xuống xe ở Mỹ Đình, vệ sinh, nghỉ ngơi', time: '04:00 - 06:30' }, { label: 'Ăn sáng, cafe', time: '06:30 - 09:30' }, { label: 'Đi Nội Bài', time: '10:00' }],
         leg: leg('30km', '45p', '10:00', '10:45', 'car') }),
       stop({ time: '10:45', icon: '✈️', img: img('may-bay-noi-bai'), title: 'Sân bay Nội Bài', desc: 'Bắt taxi vào sân bay, làm thủ tục sớm',
-        items: [{ label: 'Vệ sinh, nghỉ ngơi', time: '10:45 - 11:00' }, { label: 'Làm thủ tục', time: '11:00 - 12:00' }, { label: 'Fly ------>', time: '12:55' }],
-        leg: leg('1.160km', '2h 10p', '12:55', '15:05', 'flight') }),
-      stop({ time: '15:05', icon: '🏙️', img: img('sai-gon'), title: 'Sân bay Tân Sơn Nhất', desc: 'Welcome back!',
+        items: [{ label: 'Vệ sinh, nghỉ ngơi', time: '10:45 - 11:00' }, { label: 'Làm thủ tục', time: '11:00 - 12:00' }, { label: 'Fly ------>', time: '13:20 (delay từ 12:55)' }],
+        leg: leg('1.160km', '2h 10p', '13:20', '15:30', 'flight') }),
+      stop({ time: '15:30', icon: '🏙️', img: img('sai-gon'), title: 'Sân bay Tân Sơn Nhất', desc: 'Welcome back!',
         items: [{ label: 'Giải tán!', time: 'Bye mọi người!' }] }),
     ],
   },
@@ -127,10 +150,10 @@ export const DAYS = [
 export const META = {
   title: 'Hà Giang 2026',
   startAt: '2026-12-03T17:20:00+07:00',
-  endAt: '2026-12-08T15:05:00+07:00',
+  endAt: '2026-12-08T15:30:00+07:00',
   flights: [
     { id: 'f1', dir: 'Chiều đi', code: 'VJ128', date: '2026-12-03', dep: '17:20', arr: '19:30', from: 'SGN · Tân Sơn Nhất T1', to: 'HAN · Nội Bài T1', note: 'Có mặt sân bay trước 15:30' },
-    { id: 'f2', dir: 'Chiều về', code: 'VJ157', date: '2026-12-08', dep: '12:55', arr: '15:05', from: 'HAN · Nội Bài T1', to: 'SGN · Tân Sơn Nhất T1', note: 'Có mặt sân bay trước 11:00' },
+    { id: 'f2', dir: 'Chiều về', code: 'VJ157', date: '2026-12-08', dep: '13:20', arr: '15:30', from: 'HAN · Nội Bài T1', to: 'SGN · Tân Sơn Nhất T1', note: 'Có mặt sân bay trước 11:00' },
   ],
 }
 
@@ -158,7 +181,7 @@ export const CATS = [
 export const EXPENSES = ord([
   { title: 'Vé máy bay 3 người (VJ128 + VJ157)', amount: 8978188, cat: 'flight', status: 'paid', note: '2.959.396đ/vé + 100.000đ phí' },
   { title: 'Vé máy bay bạn thứ 4', amount: 2683422, cat: 'flight', status: 'paid', note: 'Đi 1.338.178 + về 1.233.413 + bảo hiểm 51.500 + phí 60.331' },
-  { title: 'Xe khách Bằng Phấn, 4 người × 2 chiều', amount: 2400000, cat: 'bus', status: 'planned', note: 'Ước tính 300k/chiều' },
+  { title: 'Xe khách Bằng Phấn, 4 người × 2 chiều', amount: 2800000, cat: 'bus', status: 'planned', note: 'Đã đặt: 350k/người/chiều, đi 3/12 + về 7/12, chưa thanh toán' },
   { title: 'Thuê xe máy Giang Sơn, 2 xe × 4 ngày + xăng', amount: 2240000, cat: 'bike', status: 'planned', note: 'Ước tính' },
   { title: 'Hostel Giang Sơn (sáng 4/12 + tắm 7/12)', amount: 600000, cat: 'stay', status: 'planned', note: 'Ước tính' },
   { title: 'Cici Homestay, 2 đêm', amount: 1200000, cat: 'stay', status: 'planned', note: 'Ước tính' },

@@ -27,8 +27,37 @@ export const MODES = [
   { value: 'flight', label: '✈️ Máy bay' },
 ]
 
+// Mã địa điểm Google (cid) trong link Google Maps đầy đủ: ".../data=...!1s0x36cb…:0xb092111bc7ffa94c..." hoặc "?cid=…"
+export function placeIdOf(v = '') {
+  let m = v.match(/!1s0x[0-9a-f]+:(0x[0-9a-f]+)/i)
+  if (m) return BigInt(m[1]).toString()
+  m = v.match(/[?&]cid=(\d+)/)
+  return m ? m[1] : ''
+}
+
 // Mở 1 điểm trên bản đồ
 export const placeUrl = (loc) => `${BASE}/search/?api=1&query=${enc(loc)}`
+
+// Nút "Bản đồ": có mã địa điểm thì mở đúng trang địa điểm (tên, ảnh, đánh giá); mở bằng toạ độ thì Google chỉ hiện dãy số.
+// Link rút gọn maps.app.goo.gl không đọc được toạ độ nhưng vẫn mở thẳng được.
+export function stopMapUrl(s) {
+  if (s?.place) return `https://maps.google.com/?cid=${s.place}`
+  const loc = locOf(s)
+  if (loc) return placeUrl(loc)
+  return /^https?:\/\//i.test(s?.loc || '') ? s.loc.trim() : null
+}
+
+// Khi lưu điểm dừng: dán link Google Maps đầy đủ thì tách ra toạ độ (để chỉ đường) + mã địa điểm (để mở trang địa điểm).
+// Đổi sang vị trí khác mà không có mã thì bỏ mã cũ; giữ nguyên vị trí thì giữ mã.
+export function withPlace({ loc = '', place = '' }, prev = {}) {
+  const v = loc.trim()
+  const id = placeIdOf(v)
+  if (id) {
+    const c = locOf({ loc: v })
+    return { loc: c && /^-?\d/.test(c) ? c : v, place: id }
+  }
+  return { loc: v, place: v === (prev.loc || '') ? place || prev.place || '' : '' }
+}
 
 // Dẫn đường từ vị trí hiện tại tới loc (bỏ origin = vị trí của điện thoại)
 export const navUrl = (loc) => `${BASE}/dir/?api=1&destination=${enc(loc)}&travelmode=driving&dir_action=navigate`

@@ -323,8 +323,11 @@ export function Lightbox({ src, onClose }) {
   if (!src) return null
   return createPortal(
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/90 p-4" onClick={onClose}>
-      {/* ảnh cắt từ Figma nhỏ: hiện đúng kích thước gốc ×1.3 cho nét; ảnh khác thì vừa màn hình */}
-      <img src={asset(src)} alt="" className={`mx-auto my-auto rounded-2xl ${src.includes('/img/stops/') ? 'mt-[20vh] w-[min(90vw,380px)]' : 'max-w-full sm:max-w-lg'}`} />
+      {/* căn giữa màn hình; ảnh dài hơn màn hình (bản Figma) thì cuộn từ trên xuống.
+          ảnh cắt từ Figma nhỏ: hiện đúng kích thước gốc ×1.3 cho nét; ảnh khác thì vừa màn hình */}
+      <div className="flex min-h-full items-center justify-center">
+        <img src={asset(src)} alt="" className={`rounded-2xl ${src.includes('/img/stops/') ? 'w-[min(90vw,380px)]' : 'max-w-full sm:max-w-lg'}`} />
+      </div>
       <button className="fixed top-4 right-4 grid h-10 w-10 place-items-center rounded-full bg-white/15 text-white" onClick={onClose}><X /></button>
     </div>,
     document.body,
