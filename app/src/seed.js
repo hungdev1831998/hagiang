@@ -23,7 +23,7 @@ export const STOP_LOCS = {
   'Làng dệt lanh Lùng Tám': '23.048691,105.043024',
   'Lên xe về Hà Nội': '22.822498,104.987934', 'Ăn sáng, cafe Hà Nội': '21.033585,105.855242',
   'Phố cổ Đồng Văn về đêm': '23.278261,105.361378', 'Tối ở LoLo Ancient House': LOLO,
-  'Dạo thị trấn Mèo Vạc': '23.163438,105.409783', "Tối ở O'Chau": OCHAU, 'Ăn tối, dạo phố TP Hà Giang': '22.812250,104.979979',
+  'Dạo thị trấn Mèo Vạc': '23.163438,105.409783', "Tối ở O'Chau": OCHAU, 'Ăn tối, dạo phố TP Hà Giang': '22.808151,104.978719',
 }
 // Mã địa điểm Google Maps (cid) để nút "Bản đồ" mở đúng trang địa điểm có tên, ảnh, đánh giá thay vì chỉ hiện toạ độ.
 // Dò trên Google Maps 11/2026, đều trùng toạ độ ở trên (lệch dưới 130m). Dốc Bắc Sum, chỗ ăn sáng Hà Nội
@@ -40,7 +40,7 @@ export const STOP_PLACES = {
   'Mậu Duệ': '3899514343112068669', 'Ngã Ba Hữu Vinh': '16771022136973573071', 'Làng dệt lanh Lùng Tám': '17655723657891581687',
   'Lên xe về Hà Nội': '3760678587039714122',
   'Phố cổ Đồng Văn về đêm': '7577682320141542613', 'Tối ở LoLo Ancient House': P_LOLO,
-  'Dạo thị trấn Mèo Vạc': '12923969197946578760', "Tối ở O'Chau": P_OCHAU, 'Ăn tối, dạo phố TP Hà Giang': '6203623173923170693',
+  'Dạo thị trấn Mèo Vạc': '12923969197946578760', "Tối ở O'Chau": P_OCHAU, 'Ăn tối, dạo phố TP Hà Giang': '8670080627689740822',
 }
 // leg = đoạn đường từ điểm này tới điểm sau: km, thời gian, giờ đi, giờ tới (giống đường nét đứt trong Figma)
 // mode: '' = xe máy, 'car' = ô tô / taxi, 'flight' = máy bay (chỉ đường bỏ qua chặng này), 'walk' = đi bộ
@@ -140,8 +140,8 @@ export const DAYS = [
         items: [{ label: 'Qua dốc', time: '~16:05' }], leg: leg('35km', '1h 05p', '16:05', '17:10') }),
       stop({ time: '17:10', icon: '🛵', img: img('giang-son'), title: 'Giang Sơn', desc: 'Về tới TP Hà Giang khoảng 17:10 (muộn nhất 17:30). Trả xe, tắm rửa. Không ngủ lại: đi xe đêm về Hà Nội để kịp chuyến bay 13:20 ngày mai.',
         items: [{ label: 'Trả xe, tắm rửa', time: '17:10 - 18:45' }], leg: leg('1.3km', '10p', '18:50', '19:00', 'car') }),
-      stop({ time: '19:00', icon: '🍜', title: 'Ăn tối, dạo phố TP Hà Giang', desc: 'Ăn phở chua ở quán Hiền Lương (93 Nguyễn Trãi) rồi dạo phố mua quà. Mang theo hành lí vì đi thẳng ra xe về Hà Nội.',
-        items: [{ label: 'Phở chua 93 Nguyễn Trãi', time: '19:00 - 20:00' }, { label: 'Dạo phố, mua quà', time: '20:00 - 21:15' }], leg: leg('2.2km', '15p', '21:15', '21:30', 'car') }),
+      stop({ time: '19:00', icon: '🍜', title: 'Ăn tối, dạo phố TP Hà Giang', desc: 'Ăn phở chua ở quán Lý Dính (90C Nguyễn Trãi) rồi dạo phố mua quà. Mang theo hành lí vì đi thẳng ra xe về Hà Nội.',
+        items: [{ label: 'Phở chua Lý Dính', time: '19:00 - 20:00' }, { label: 'Dạo phố, mua quà', time: '20:00 - 21:15' }], leg: leg('2.7km', '15p', '21:15', '21:30', 'car') }),
       stop({ time: '21:30', icon: '🚌', img: img('xe-giuong-nam'), title: 'Lên xe về Hà Nội', desc: 'Văn phòng Bằng Phấn: số 100 Trần Phú, P. Hà Giang 2. Có mặt trước 30 phút, xe chạy 22:00, tới Mỹ Đình khoảng 04:00. Kiểm tra hành lí, giấy tờ trước khi lên xe.',
         items: [{ label: 'Xe Bằng Phấn', time: '0917.898.898' }, { label: 'Giường', time: 'A8, A10, B8, B10' }, { label: 'Xe chạy', time: '22:00' }] }),
     ],
